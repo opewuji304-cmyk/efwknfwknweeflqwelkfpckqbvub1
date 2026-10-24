@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aether
+      POSTGRES_USER: aether
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local environment}
+    volumes:
+      - aether_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aether -d aether"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://aether:${POSTGRES_PASSWORD}@db:5432/aether
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set a Telegram bot token for local integration}
+      DEPOSIT_WEBHOOK_SECRET: ${DEPOSIT_WEBHOOK_SECRET:-}
+      ACQUIRER_WEBHOOK_SECRET: ${ACQUIRER_WEBHOOK_SECRET:-}
+      DEV_CREDIT_ENABLED: ${DEV_CREDIT_ENABLED:-0}
+      DEV_CREDIT_TOKEN: ${DEV_CREDIT_TOKEN:-}
+      DEV_ACQUIRER_ENABLED: ${DEV_ACQUIRER_ENABLED:-0}
+      DATA_REGION: ${DATA_REGION:-}
+      REGULATORY_APPROVED: ${REGULATORY_APPROVED:-0}
+      CUSTODY_PROVIDER: ${CUSTODY_PROVIDER:-}
+      CHAIN_PROVIDER: ${CHAIN_PROVIDER:-}
+      SCREENING_PROVIDER: ${SCREENING_PROVIDER:-}
+      KYC_AML_PROVIDER: ${KYC_AML_PROVIDER:-}
+      ONRAMP_PROVIDER: ${ONRAMP_PROVIDER:-}
+      ACQUIRER_PROVIDER: ${ACQUIRER_PROVIDER:-}
+      PAYOUT_PROVIDER: ${PAYOUT_PROVIDER:-}
+      KMS_KEY_REFERENCE: ${KMS_KEY_REFERENCE:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+volumes:
+  aether_pg:

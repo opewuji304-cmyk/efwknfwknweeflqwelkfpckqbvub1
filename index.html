@@ -116,7 +116,7 @@ select option{background:#130B22}
   <div class="ig"><span class="il">Актив и сеть</span><select id="s-asset"></select></div>
   <div class="ig"><span class="il">Адрес получателя (в той же сети)</span><input id="s-addr" placeholder="0x…"></div>
   <div class="ig"><span class="il">Сумма</span><input id="s-amt" type="number" inputmode="decimal" placeholder="0.00"></div>
-  <div class="info">Комиссия сети списывается с баланса нативной монеты (BNB / ETH / POL / TRX). Для перевода USDT в TRON на балансе должен быть TRX.</div>
+  <div class="info">Сейчас комиссия блокчейна оплачивается нативной монетой сети (BNB / ETH / POL / TRX). Списание сетевой комиссии в USDT, общий баланс и отправка между сетями требуют серверного сервиса и здесь не подключены.</div>
   <button class="pb" id="s-btn" onclick="doSend()">Подтвердить перевод</button>
 </div></div>
 
@@ -162,6 +162,7 @@ const tg=window.Telegram&&Telegram.WebApp;if(tg)tg.expand();
 const hap=()=>{try{tg.HapticFeedback.impactOccurred('light')}catch(e){}};
 const $=i=>document.getElementById(i);
 const fmt=n=>Number(n).toLocaleString('ru-RU',{maximumFractionDigits:6});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const I={send:'<path d="M7 17L17 7M8 7h9v9"/>',recv:'<path d="M17 7L7 17M16 17H7V8"/>',swap:'<path d="M7 4v13M7 17l-3-3M7 17l3-3M17 20V7M17 7l-3 3M17 7l3 3"/>',buy:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',hist:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',menu:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>'};
 document.querySelectorAll('[data-i]').forEach(e=>e.innerHTML=`<svg viewBox="0 0 24 24">${I[e.dataset.i]}</svg>`);
 
@@ -183,7 +184,7 @@ const ICO={BNB:'bnb',ETH:'eth',POL:'matic',TRX:'trx',USDT:'usdt',USDC:'usdc'},ZE
 const ERC=['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
 const H=[],P={USDT:1,USDC:1},PR={};
 for(const n in NETS){H.push({net:n,sym:NETS[n].nat,tok:null,dec:n==='TRX'?6:18,bal:null});TOK[n].forEach(([s,a,d])=>H.push({net:n,sym:s,tok:a,dec:d,bal:null}))}
-const prov=n=>PR[n]||(PR[n]=new ethers.providers.StaticJsonRpcProvider(CFG.RPC[n]||NETS[n].rpc[0],NETS[n].id));
+const prov=n=>PR[n]||(PR[n]=CFG.RPC[n]?new ethers.providers.StaticJsonRpcProvider(CFG.RPC[n],NETS[n].id):new ethers.providers.FallbackProvider(NETS[n].rpc.map((url,i)=>({provider:new ethers.providers.StaticJsonRpcProvider(url,NETS[n].id),priority:i+1,weight:1,stallTimeout:1500}))));
 const S={hist:[],hLoaded:false};
 const coin=h=>`<div class="co"><i>${h.sym[0]}</i><img src="https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ICO[h.sym]}.svg" onerror="this.remove()"><span class="nb ${h.net}">${h.net[0]}</span></div>`;
 
@@ -197,14 +198,16 @@ async function rpc(n,m,p){
   throw err;
 }
 const TH=['https://api.trongrid.io','https://api.tronstack.io'];
-async function tron(path,body){let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(r=>r.json()))}catch(e){err=e}}throw err}
+async function tron(path,body){let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(async r=>{const j=await r.json();if(!r.ok||j.Error||j.error)throw new Error(j.Error||j.error||`HTTP ${r.status}`);return j}))}catch(e){err=e}}throw err}
 function tronOk(a){try{const d=ethers.utils.base58.decode(a);return d.length===25&&d[0]===0x41&&ethers.utils.hexlify(d.slice(21))===ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(d.slice(0,21))),0,4)}catch(e){return false}}
 
 // ===== АККАУНТ: уникальный кошелёк и хранилище на каждого пользователя =====
 function initAccount(){
   const u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user;
   S.uid=u?String(u.id):'local';S.mk='aether_m_'+S.uid;S.tk='aether_tx_'+S.uid;
-  let m=localStorage.getItem(S.mk)||localStorage.getItem('aether_master_mnemonic'); // миграция старого кошелька
+  // Telegram initDataUnsafe is presentation data only; never use it as proof of identity.
+  // Do not migrate a shared legacy key into per-user Telegram storage: that can reuse one wallet across accounts.
+  let m=localStorage.getItem(S.mk)||(!u&&localStorage.getItem('aether_master_mnemonic'));
   if(!m||!ethers.utils.isValidMnemonic(m))m=ethers.Wallet.createRandom().mnemonic.phrase;
   localStorage.setItem(S.mk,m);
   S.loc=JSON.parse(localStorage.getItem(S.tk)||'[]');
@@ -225,7 +228,7 @@ function render(){
   rows.forEach(r=>tot+=r.usd);rows.sort((a,b)=>b.usd-a.usd||(b.h.bal||0)-(a.h.bal||0));
   $('assets').innerHTML=rows.map(({h,i,usd})=>`<div class="ai ${h.bal?'':'z'}" onclick="openSend(${i})">${coin(h)}<div class="m"><div class="t">${h.sym}</div><div class="s">${NETS[h.net].name}</div></div><div class="v"><div class="a">${h.err?'нет связи':h.bal===null?'…':fmt(h.bal)}</div><div class="s">$${usd.toFixed(2)}</div></div></div>`).join('');
   $('usd').textContent='$'+tot.toFixed(2);
-  $('diag').innerHTML=Object.keys(NETS).map(n=>{const e=H.find(h=>h.net===n&&h.err);return `${NETS[n].name}: ${e?'<span style="color:var(--er)">'+e.err+'</span>':'<span style="color:var(--ok)">ок</span>'}`}).join('<br>');
+  $('diag').innerHTML=Object.keys(NETS).map(n=>{const e=H.find(h=>h.net===n&&h.err);return `${NETS[n].name}: ${e?'<span style="color:var(--er)">'+esc(e.err)+'</span>':'<span style="color:var(--ok)">ок</span>'}`}).join('<br>');
 }
 
 async function syncEvm(h){
@@ -296,13 +299,14 @@ function renderHist(){
   const el=$('hist');
   if(!S.hist.length){el.innerHTML=`<div class="empty">${S.hLoaded?'Операций пока нет':'Загрузка…'}</div>`;return}
   const L={ok:'Одобрена',pending:'В обработке',fail:'Отклонена'};
-  el.innerHTML=S.hist.map(x=>`<div class="hi"><div class="hic ${x.dir}"><svg viewBox="0 0 24 24">${x.kind==='swap'?I.swap:x.dir==='in'?I.recv:I.send}</svg></div><div class="m"><div class="t">${x.note||(x.dir==='in'?'Пополнение':'Трата')} · ${NETS[x.net].name}</div><div class="s">${new Date(x.t).toLocaleString('ru-RU')} · ${x.hash.startsWith('detected')?'обнаружено в сети':x.hash.slice(0,8)+'…'+x.hash.slice(-6)}</div></div><div class="v"><div class="a ${x.dir}">${x.dir==='in'?'+':'−'}${fmt(x.amt)} ${x.sym}</div><span class="bdg ${x.st}">${L[x.st]}</span></div></div>`).join('');
+  el.innerHTML=S.hist.map(x=>`<div class="hi"><div class="hic ${x.dir==='in'?'in':'out'}"><svg viewBox="0 0 24 24">${x.kind==='swap'?I.swap:x.dir==='in'?I.recv:I.send}</svg></div><div class="m"><div class="t">${esc(x.note||(x.dir==='in'?'Пополнение':'Трата'))} · ${esc(NETS[x.net]?.name||x.net)}</div><div class="s">${new Date(x.t).toLocaleString('ru-RU')} · ${String(x.hash).startsWith('detected')?'обнаружено в сети':esc(String(x.hash).slice(0,8)+'…'+String(x.hash).slice(-6))}</div></div><div class="v"><div class="a ${x.dir==='in'?'in':'out'}">${x.dir==='in'?'+':'−'}${fmt(x.amt)} ${esc(x.sym)}</div><span class="bdg ${['ok','pending','fail'].includes(x.st)?x.st:'pending'}">${L[x.st]||'В обработке'}</span></div></div>`).join('');
 }
 
 async function syncAll(){
+  if(S.syncing)return;S.syncing=true;
   $('upd').textContent='Синхронизация…';
-  await Promise.all([...H.filter(h=>h.net!=='TRX').map(syncEvm),syncTron(),syncPrices(),loadHist()]);
-  $('upd').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
+  try{await Promise.all([...H.filter(h=>h.net!=='TRX').map(syncEvm),syncTron(),syncPrices(),loadHist()]);$('upd').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU')}
+  catch(e){$('upd').textContent='Не удалось обновить данные'}finally{S.syncing=false}
 }
 
 // ===== ОТПРАВКА =====
@@ -317,10 +321,17 @@ async function doSend(){
   const h=H[+$('s-asset').value],to=$('s-addr').value.trim(),a=$('s-amt').value;
   if(H[+$('s-asset').value].net==='TRX'?!tronOk(to):!ethers.utils.isAddress(to))return alert('Неверный адрес получателя для выбранной сети');
   if(!(+a>0))return alert('Введите сумму');
-  if(h.bal!==null&&+a>h.bal)return alert('Недостаточно средств');
+  if(h.err||h.bal===null)return alert('Не удалось проверить баланс сети. Обновите данные и повторите попытку.');
+  if(+a>h.bal)return alert('Недостаточно средств');
+  if(!Number.isFinite(Number(a)))return alert('Введите корректную сумму');
   const b=$('s-btn');b.disabled=true;b.textContent='Отправка в сеть…';
-  try{if(h.net==='TRX'){await sendTron(h,to,a);closeModals();b.disabled=false;b.textContent='Подтвердить перевод';return}const w=S.w.connect(prov(h.net)),v=ethers.utils.parseUnits(a,h.dec);
-    const tx=h.tok?await new ethers.Contract(h.tok,ERC,w).transfer(to,v):await w.sendTransaction({to,value:v});
+  try{if(h.net==='TRX'){await sendTron(h,to,a);closeModals();b.disabled=false;b.textContent='Подтвердить перевод';return}const p=prov(h.net),w=S.w.connect(p),v=ethers.utils.parseUnits(a,h.dec);
+    const txc=h.tok?new ethers.Contract(h.tok,ERC,w):null;
+    const gas=h.tok?await txc.estimateGas.transfer(to,v):await w.estimateGas({to,value:v});
+    const fee=gas.mul(await p.getGasPrice()).mul(120).div(100);
+    const native=await p.getBalance(S.evm),value=h.tok?ethers.constants.Zero:v;
+    if(native.lt(fee.add(value)))throw new Error(`Недостаточно ${NETS[h.net].nat} для комиссии сети`);
+    const tx=h.tok?await txc.transfer(to,v,{gasLimit:gas.mul(120).div(100)}):await w.sendTransaction({to,value,gasLimit:gas.mul(120).div(100)});
     rec(tx,h,a);closeModals();
   }catch(e){alert('Ошибка перевода: '+(e.reason||e.message))}
   b.disabled=false;b.textContent='Подтвердить перевод';
@@ -346,21 +357,22 @@ const lh=()=>CFG.LIFI_KEY?{'x-lifi-api-key':CFG.LIFI_KEY}:{};
 async function swapQuote(silent){
   const f=H[+$('w-from').value],tn=$('w-tn').value,tt=H.find(h=>h.net===tn&&h.sym===$('w-tt').value),amt=$('w-amt').value,inf=$('w-info');
   if(!(+amt>0))return inf.textContent='Введите сумму';
-  if(f.bal!==null&&+amt>f.bal)return inf.textContent='Недостаточно средств';
+  if(f.err||f.bal===null)return inf.textContent='Сначала дождитесь проверки баланса исходной сети.';
+  if(+amt>f.bal)return inf.textContent='Недостаточно средств';
   if(!silent){inf.textContent='Ищем лучший маршрут…';$('w-go').disabled=true}
   try{
     const q=new URLSearchParams({fromChain:NETS[f.net].id,toChain:NETS[tn].id,fromToken:f.tok||ZERO,toToken:tt.tok||ZERO,fromAmount:ethers.utils.parseUnits(amt,f.dec).toString(),fromAddress:S.evm,toAddress:S.evm,slippage:0.005});
     const j=await(await fetch('https://li.quest/v1/quote?'+q,{headers:lh()})).json();
     if(!j.estimate)throw new Error(j.message||'Маршрут не найден');
     S.q={j,f,tt,tn,amt};const e=j.estimate;
-    inf.innerHTML=`Получите не менее <b style="color:var(--tx)">${fmt(ethers.utils.formatUnits(e.toAmountMin,tt.dec))} ${tt.sym}</b><br>Маршрут: ${j.toolDetails?j.toolDetails.name:j.tool} · ≈ ${Math.max(1,Math.round((e.executionDuration||60)/60))} мин${f.net!==tn?' (кроссчейн)':''}`;
+    inf.innerHTML=`Получите не менее <b style="color:var(--tx)">${fmt(ethers.utils.formatUnits(e.toAmountMin,tt.dec))} ${esc(tt.sym)}</b><br>Маршрут: ${esc(j.toolDetails?.name||j.tool||'LI.FI')} · ≈ ${Math.max(1,Math.round((e.executionDuration||60)/60))} мин${f.net!==tn?' (кроссчейн)':''}`;
     $('w-go').disabled=false;
   }catch(e){inf.textContent='Ошибка: '+e.message}
 }
 async function swapExec(){
   const b=$('w-go');b.disabled=true;
   try{
-    let {j,f,tt,tn,amt}=S.q;const w=S.w.connect(prov(f.net));
+    let {j,f,tt,tn,amt}=S.q;if(!f||!tt||$('w-from').value===''||$('w-tn').value!==tn||$('w-tt').value!==tt.sym||$('w-amt').value!==amt)throw new Error('Котировка устарела. Запросите новую.');const w=S.w.connect(prov(f.net));
     if(f.tok){const c=new ethers.Contract(f.tok,ERC,w),need=ethers.BigNumber.from(j.action.fromAmount);
       if((await c.allowance(S.evm,j.estimate.approvalAddress)).lt(need)){b.textContent='Разрешение токена…';await(await c.approve(j.estimate.approvalAddress,need)).wait();await swapQuote(true);j=S.q.j}}
     b.textContent='Отправка…';const r=j.transactionRequest;
@@ -442,7 +454,7 @@ function closeModals(){document.querySelectorAll('.mo').forEach(m=>m.classList.r
 window.onload=()=>{
   initAccount();
   $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');
-  const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
+  const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).filter(Boolean).join('');
   $('w-from').innerHTML=ev;$('b-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
   $('w-tn').innerHTML=Object.keys(NETS).filter(n=>n!=='TRX').map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');fillTo();
   render();renderHist();syncAll();kycUi();bkUi();
