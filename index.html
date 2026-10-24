@@ -1,819 +1,502 @@
 <!DOCTYPE html>
-<html lang="ru" class="dark">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRIME FINTECH | Purple Edition Gateway</title>
-
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        purpleBrand: {
-                            400: '#C084FC',
-                            500: '#A78BFA',
-                            600: '#8B5CF6',
-                            700: '#5B3C8C', /* Primary Brand Anchor */
-                            800: '#43296B',
-                            900: '#2A1847',
-                            950: '#1B132B',
-                        },
-                        darkSlate: {
-                            800: '#1e192c',
-                            850: '#161124',
-                            900: '#110c1c',
-                            950: '#09060e',
-                        },
-                        emerald: {
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- Telegram WebApp SDK -->
+    <title>Crypto Exchange Terminal</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- QRCode JS CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #09060e; }
-        ::-webkit-scrollbar-thumb { background: #2A1847; border-radius: 4px; }
-        
-        body {
-            background-color: #09060e;
-            color: #f8fafc;
-            user-select: none;
-            -webkit-user-select: none;
+        :root {
+            --bg-main: #0C0714;
+            --bg-card: rgba(255, 255, 255, 0.035);
+            --bg-card-hover: rgba(255, 255, 255, 0.06);
+            --bg-input: rgba(18, 12, 30, 0.6);
+            
+            --accent-primary: #5B3C8C;
+            --accent-soft: #7C52C2;
+            --accent-light: #B89CE8;
+            --accent-glow: rgba(91, 60, 140, 0.25);
+            
+            --text-main: #F3EEFC;
+            --text-muted: #9E93B3;
+            --border-subtle: rgba(157, 123, 219, 0.12);
+            --border-active: rgba(184, 156, 232, 0.35);
+
+            --success: #34D399;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
-        .glass-card {
-            background: rgba(22, 17, 36, 0.75);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(139, 92, 246, 0.15);
+        body {
+            background: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(91, 60, 140, 0.18) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(124, 82, 194, 0.12) 0%, transparent 40%);
+            background-attachment: fixed;
+            padding-bottom: 80px;
         }
 
-        .glass-card-interactive {
-            background: rgba(22, 17, 36, 0.75);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(139, 92, 246, 0.15);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .glass-card-interactive:active {
+        /* HEADER */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-soft));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            color: var(--success);
+            background: rgba(52, 211, 153, 0.08);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* CARD STYLES */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            transition: all 0.25s ease;
+        }
+
+        .card-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* EXCHANGE FORM */
+        .input-group {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--border-active);
+        }
+
+        .amount-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-size: 20px;
+            font-weight: 600;
+            width: 60%;
+        }
+
+        .currency-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .swap-divider {
+            display: flex;
+            justify-content: center;
+            margin: -6px 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .swap-btn {
+            background: var(--accent-primary);
+            border: 3px solid var(--bg-main);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--accent-glow);
+            transition: transform 0.2s;
+        }
+
+        .swap-btn:active {
+            transform: scale(0.9) rotate(180deg);
+        }
+
+        /* NETWORKS & METHOD SELECTION */
+        .chip-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .chip {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .chip.active {
+            background: rgba(91, 60, 140, 0.25);
+            border-color: var(--accent-light);
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* ACTION BUTTON */
+        .primary-btn {
+            background: linear-gradient(135deg, #5B3C8C, #7C52C2);
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 20px var(--accent-glow);
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 8px;
+        }
+
+        .primary-btn:active {
             transform: scale(0.98);
-            border-color: rgba(167, 139, 250, 0.5);
+            opacity: 0.9;
         }
 
-        .glow-brand {
-            box-shadow: 0 0 30px -5px rgba(91, 60, 140, 0.5);
+        /* NAVIGATION BAR */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 440px;
+            background: rgba(12, 7, 20, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0 20px 0;
+            z-index: 100;
         }
 
-        .glow-accent {
-            box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.4);
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            transition: color 0.2s;
+            width: 25%;
         }
 
-        .bg-purple-gradient {
-            background: linear-gradient(135deg, #5B3C8C 0%, #8B5CF6 100%);
+        .nav-item.active {
+            color: var(--accent-light);
         }
 
-        .bg-purple-dark-gradient {
-            background: linear-gradient(180deg, #161124 0%, #09060e 100%);
+        .nav-icon {
+            font-size: 18px;
+        }
+
+        /* TAB SECTIONS */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .tab-content.active {
+            display: flex;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between pb-24 font-sans antialiased bg-purple-dark-gradient">
+<body>
 
-    <!-- Top App Header -->
-    <header class="sticky top-0 z-40 bg-darkSlate-950/80 backdrop-blur-md border-b border-purpleBrand-900/40 px-4 py-3">
-        <div class="max-w-lg mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-xl bg-purple-gradient flex items-center justify-center font-black text-white shadow-lg glow-brand">
-                    PF
-                </div>
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-logo">🌌</div>
                 <div>
-                    <div class="flex items-center space-x-1.5">
-                        <span class="font-bold text-sm tracking-wide text-white">PRIME FINTECH</span>
-                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-purpleBrand-700/30 text-purpleBrand-400 border border-purpleBrand-600/40 rounded">B2C Gateway</span>
-                    </div>
-                    <p class="text-[10px] font-mono text-purpleBrand-400/80" id="user-tg-tag">@loading_user</p>
+                    <div class="brand-title">Aether Exchange</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">RUB ↔ USDT Terminal</div>
                 </div>
             </div>
-
-            <!-- Verification Pill -->
-            <button onclick="switchTab('kyc')" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-darkSlate-850 border border-purpleBrand-800/60 text-xs font-medium text-slate-300 hover:border-purpleBrand-600 transition">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" id="kyc-indicator-dot"></span>
-                <span id="kyc-status-header-text" class="text-[11px] font-semibold text-purpleBrand-400">Level 1</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="max-w-lg mx-auto w-full px-4 pt-4 flex-1">
-
-        <!-- TAB 1: EXCHANGE TERMINAL -->
-        <section id="tab-exchange" class="tab-content space-y-4">
-            
-            <!-- Trade Type Selector (Buy / Sell) -->
-            <div class="grid grid-cols-2 gap-1.5 bg-darkSlate-950/90 p-1.5 rounded-2xl border border-purpleBrand-900/60">
-                <button id="mode-buy-btn" onclick="setExchangeMode('buy')" class="py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-purpleBrand-700 text-white shadow-lg glow-brand">
-                    <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400"></i>
-                    <span>Купить Крипту (RUB)</span>
-                </button>
-                <button id="mode-sell-btn" onclick="setExchangeMode('sell')" class="py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white">
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                    <span>Продать Крипту (RUB)</span>
-                </button>
+            <div class="status-badge">
+                <span class="status-dot"></span> СБП 24/7
             </div>
+        </div>
 
-            <!-- Swap Widget Card -->
-            <div class="glass-card p-4 rounded-3xl space-y-3 relative">
+        <!-- TAB 1: EXCHANGE -->
+        <div id="tab-exchange" class="tab-content active">
+            <div class="card">
+                <div class="card-title">Направление обмена</div>
                 
-                <!-- Send Section -->
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs text-purpleBrand-400/80 px-1 font-medium">
-                        <span>Вы отдаете</span>
-                        <span id="label-send-min">Мин: 5 000 RUB</span>
-                    </div>
-                    <div class="flex items-center bg-darkSlate-950/90 border border-purpleBrand-900/60 rounded-2xl p-2.5 focus-within:border-purpleBrand-600 transition">
-                        <input type="number" id="input-send-amount" oninput="calculateExchange()" value="15000" placeholder="0.00" class="w-full bg-transparent text-xl font-mono font-bold text-white focus:outline-none px-2">
-                        
-                        <!-- Currency Badge -->
-                        <div class="flex items-center space-x-2 bg-purpleBrand-950 border border-purpleBrand-800/80 px-3 py-1.5 rounded-xl text-sm font-bold text-white shrink-0" id="send-currency-badge">
-                            <span id="send-currency-icon">🇷🇺</span>
-                            <span id="send-currency-code">RUB</span>
-                        </div>
-                    </div>
+                <!-- Send Amount -->
+                <div class="input-group">
+                    <input type="number" id="from-amount" class="amount-input" value="10000" placeholder="0.00" oninput="calculateExchange()">
+                    <select id="from-currency" class="currency-select" onchange="calculateExchange()">
+                        <option value="RUB">RUB (СБП)</option>
+                        <option value="USDT">USDT</option>
+                    </select>
                 </div>
 
-                <!-- Swap Center Button -->
-                <div class="flex justify-center -my-2 relative z-10">
-                    <button onclick="toggleExchangeDirection()" class="bg-purpleBrand-700 border border-purpleBrand-500 text-white p-2.5 rounded-2xl hover:scale-110 active:scale-95 transition shadow-lg glow-accent">
-                        <i data-lucide="arrow-up-down" class="w-4 h-4"></i>
-                    </button>
+                <div class="swap-divider">
+                    <button class="swap-btn" onclick="toggleDirection()">↓</button>
                 </div>
 
-                <!-- Receive Section -->
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs text-purpleBrand-400/80 px-1 font-medium">
-                        <span>Вы получаете (расчетно)</span>
-                        <span id="current-exchange-rate" class="font-mono text-emerald-400">1 USDT = 96.50 RUB</span>
-                    </div>
-                    <div class="flex items-center bg-darkSlate-950/90 border border-purpleBrand-900/60 rounded-2xl p-2.5">
-                        <input type="text" id="input-receive-amount" readonly placeholder="0.00" class="w-full bg-transparent text-xl font-mono font-bold text-emerald-400 focus:outline-none px-2">
-                        
-                        <!-- Crypto Asset Dropdown -->
-                        <select id="select-crypto" onchange="onCryptoAssetChange()" class="bg-purpleBrand-950 border border-purpleBrand-800/80 px-3 py-1.5 rounded-xl text-sm font-bold text-purpleBrand-400 focus:outline-none shrink-0 cursor-pointer">
-                            <option value="USDT">USDT</option>
-                            <option value="BTC">BTC</option>
-                            <option value="ETH">ETH</option>
-                            <option value="TON">TON</option>
-                            <option value="SOL">SOL</option>
-                        </select>
-                    </div>
+                <!-- Receive Amount -->
+                <div class="input-group">
+                    <input type="number" id="to-amount" class="amount-input" value="105.26" readonly placeholder="0.00">
+                    <select id="to-currency" class="currency-select" disabled>
+                        <option value="USDT">USDT</option>
+                        <option value="RUB">RUB</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>Курс обмена:</span>
+                    <span id="rate-display" style="color: var(--text-main); font-weight: 600;">1 USDT = 95.00 RUB</span>
                 </div>
             </div>
 
-            <!-- Network Selector (USDT networks) -->
-            <div id="network-selector-block" class="glass-card p-3.5 rounded-2xl space-y-2">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-purpleBrand-400/90 font-medium">Сеть вывода (USDT)</span>
-                    <span id="network-fee-badge" class="text-[10px] font-mono text-emerald-400 bg-darkSlate-950 px-2 py-0.5 rounded border border-purpleBrand-900">Комиссия: ~$1.00</span>
-                </div>
-                <div class="grid grid-cols-4 gap-1.5" id="network-buttons-grid">
-                    <button onclick="selectNetwork('TRC20')" id="net-btn-TRC20" class="network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-500 bg-purpleBrand-700/30 text-purpleBrand-400 transition">TRC-20</button>
-                    <button onclick="selectNetwork('TON')" id="net-btn-TON" class="network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-900/60 bg-darkSlate-950 text-slate-400 transition">TON</button>
-                    <button onclick="selectNetwork('BEP20')" id="net-btn-BEP20" class="network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-900/60 bg-darkSlate-950 text-slate-400 transition">BEP-20</button>
-                    <button onclick="selectNetwork('ERC20')" id="net-btn-ERC20" class="network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-900/60 bg-darkSlate-950 text-slate-400 transition">ERC-20</button>
+            <!-- Network Selection -->
+            <div class="card">
+                <div class="card-title">Выберите сеть перевода</div>
+                <div class="chip-grid">
+                    <div class="chip active" onclick="selectChip(this, 'TRC20')">TRC-20</div>
+                    <div class="chip" onclick="selectChip(this, 'TON')">TON</div>
+                    <div class="chip" onclick="selectChip(this, 'BEP20')">BEP-20</div>
                 </div>
             </div>
 
-            <!-- Destination Address Input -->
-            <div class="glass-card p-3.5 rounded-2xl space-y-1.5">
-                <label id="label-destination" class="block text-xs font-medium text-purpleBrand-400/90">Адрес получателя (USDT TRC-20)</label>
-                <div class="flex items-center space-x-2">
-                    <input type="text" id="input-destination-requisites" placeholder="Вставьте адрес кошелька..." class="w-full bg-darkSlate-950 border border-purpleBrand-900/60 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-purpleBrand-500 transition">
+            <!-- Requisites Input -->
+            <div class="card">
+                <div class="card-title">Реквизиты получения</div>
+                <div class="input-group">
+                    <input type="text" id="destination-address" class="amount-input" style="width: 100%; font-size: 14px;" placeholder="Введите ваш криптокошелек...">
                 </div>
             </div>
 
-            <!-- Guarantee Information Banner -->
-            <div class="p-3 rounded-2xl bg-darkSlate-900/80 border border-purpleBrand-900/40 flex items-start space-x-3 text-xs text-slate-400">
-                <i data-lucide="shield-check" class="w-5 h-5 text-purpleBrand-400 shrink-0 mt-0.5"></i>
-                <div class="space-y-0.5 text-[11px] leading-relaxed">
-                    <span class="text-purpleBrand-400 font-semibold block">Гарантия B2C/P2C проведения</span>
-                    Оплата происходит по QR-коду СБП (НСПК) на счет ООО "ПРАЙМ ФИНТЕХ". Чеки и ордера формируются в соответствии с законодательством.
-                </div>
-            </div>
-
-            <!-- Submit Action Button -->
-            <button onclick="initiateOrderCreation()" class="w-full bg-purple-gradient hover:opacity-95 active:scale-[0.99] text-white font-bold py-4 rounded-2xl shadow-xl glow-brand flex items-center justify-center space-x-2 text-sm transition">
-                <i data-lucide="qr-code" class="w-5 h-5"></i>
-                <span>Сформировать счет СБП</span>
-            </button>
-        </section>
-
-        <!-- TAB 2: MARKET RATES -->
-        <section id="tab-market" class="tab-content hidden space-y-4">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-base font-bold text-white">Мониторинг курсов</h2>
-                    <p class="text-xs text-purpleBrand-400/80">Прямые котировки фиатных пар B2C</p>
-                </div>
-                <span class="px-2 py-1 text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg">Live</span>
-            </div>
-
-            <!-- Crypto Assets List -->
-            <div class="space-y-2.5" id="market-assets-container">
-                <!-- Asset 1: USDT -->
-                <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-purpleBrand-700/20 border border-purpleBrand-600/30 flex items-center justify-center font-bold text-emerald-400 text-sm">
-                            ₮
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-1.5">
-                                <span class="font-bold text-sm text-white">Tether USDT</span>
-                                <span class="text-[10px] font-mono bg-darkSlate-950 text-purpleBrand-400 px-1.5 py-0.5 rounded border border-purpleBrand-900">STABLE</span>
-                            </div>
-                            <p class="text-xs text-slate-400">TRC20 / TON / BEP20</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-mono font-bold text-sm text-white">96.50 RUB</p>
-                        <span class="text-[10px] font-mono text-emerald-400 font-semibold">+0.42%</span>
-                    </div>
-                </div>
-
-                <!-- Asset 2: BTC -->
-                <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-400 text-sm">
-                            ₿
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-1.5">
-                                <span class="font-bold text-sm text-white">Bitcoin</span>
-                                <span class="text-[10px] font-mono bg-darkSlate-950 text-slate-400 px-1.5 py-0.5 rounded border border-purpleBrand-900">BTC</span>
-                            </div>
-                            <p class="text-xs text-slate-400">Bitcoin Mainnet</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-mono font-bold text-sm text-white">6,420,150 RUB</p>
-                        <span class="text-[10px] font-mono text-emerald-400 font-semibold">+2.18%</span>
-                    </div>
-                </div>
-
-                <!-- Asset 3: ETH -->
-                <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-purpleBrand-600/20 border border-purpleBrand-500/30 flex items-center justify-center font-bold text-purpleBrand-400 text-sm">
-                            Ξ
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-1.5">
-                                <span class="font-bold text-sm text-white">Ethereum</span>
-                                <span class="text-[10px] font-mono bg-darkSlate-950 text-slate-400 px-1.5 py-0.5 rounded border border-purpleBrand-900">ETH</span>
-                            </div>
-                            <p class="text-xs text-slate-400">ERC20 Network</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-mono font-bold text-sm text-white">248,900 RUB</p>
-                        <span class="text-[10px] font-mono text-red-400 font-semibold">-0.85%</span>
-                    </div>
-                </div>
-
-                <!-- Asset 4: TON -->
-                <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center font-bold text-sky-400 text-sm">
-                            💎
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-1.5">
-                                <span class="font-bold text-sm text-white">Toncoin</span>
-                                <span class="text-[10px] font-mono bg-darkSlate-950 text-slate-400 px-1.5 py-0.5 rounded border border-purpleBrand-900">TON</span>
-                            </div>
-                            <p class="text-xs text-slate-400">The Open Network</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-mono font-bold text-sm text-white">512.30 RUB</p>
-                        <span class="text-[10px] font-mono text-emerald-400 font-semibold">+5.60%</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Limits Card -->
-            <div class="glass-card p-4 rounded-2xl space-y-2">
-                <h3 class="text-xs font-bold text-purpleBrand-400">Лимиты и комиссии P2C</h3>
-                <div class="text-[11px] text-slate-400 space-y-1 font-mono">
-                    <div class="flex justify-between"><span>Минимальный обмен:</span> <span class="text-white">5 000 RUB</span></div>
-                    <div class="flex justify-between"><span>Максимальный разовый:</span> <span class="text-white">600 000 RUB (Level 2)</span></div>
-                    <div class="flex justify-between"><span>Комиссия сервиса:</span> <span class="text-emerald-400">0.0% (Включена в курс)</span></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: KYC / VERIFICATION -->
-        <section id="tab-kyc" class="tab-content hidden space-y-4">
-            <div>
-                <h2 class="text-base font-bold text-white">Идентификация и Лимиты</h2>
-                <p class="text-xs text-purpleBrand-400/80">Согласно 115-ФЗ и правилам AML/KYC</p>
-            </div>
-
-            <!-- KYC Tier Card -->
-            <div class="glass-card p-4 rounded-3xl space-y-3 relative overflow-hidden border-purpleBrand-600/40 glow-brand">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <span class="text-[10px] font-bold text-purpleBrand-400 uppercase tracking-widest block">Текущий уровень</span>
-                        <h3 class="text-lg font-bold text-white" id="kyc-level-title">Уровень 1: Начальный</h3>
-                    </div>
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">Лимит: 50 000 ₽/день</span>
-                </div>
-
-                <div class="w-full bg-darkSlate-950 rounded-full h-2 overflow-hidden border border-purpleBrand-900/60">
-                    <div id="kyc-progress-bar" class="bg-purple-gradient h-full w-1/3 transition-all duration-500"></div>
-                </div>
-
-                <p class="text-[11px] text-slate-300 leading-relaxed">
-                    Пройдите стандартную проверку личности для увеличения лимита до 600 000 ₽ за одну операцию.
-                </p>
-            </div>
-
-            <!-- KYC Form -->
-            <div class="glass-card p-4 rounded-3xl space-y-4">
-                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Форма верификации (Уровень 2)</h3>
-
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-[11px] text-purpleBrand-400/90 mb-1">ФИО полностью (по паспорту)</label>
-                        <input type="text" id="kyc-fullname" placeholder="Иванов Иван Иванович" class="w-full bg-darkSlate-950 border border-purpleBrand-900/60 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purpleBrand-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-[11px] text-purpleBrand-400/90 mb-1">ИНН (Опционально)</label>
-                        <input type="text" placeholder="12 цифр" class="w-full bg-darkSlate-950 border border-purpleBrand-900/60 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purpleBrand-500">
-                    </div>
-
-                    <!-- Upload Box -->
-                    <div>
-                        <label class="block text-[11px] text-purpleBrand-400/90 mb-1">Разворот паспорта (Главная страница)</label>
-                        <div onclick="simulateFileUpload()" id="file-dropzone-doc" class="border-2 border-dashed border-purpleBrand-900/80 hover:border-purpleBrand-500/80 bg-darkSlate-950/80 rounded-2xl p-4 text-center cursor-pointer transition">
-                            <i data-lucide="upload-cloud" class="w-6 h-6 text-purpleBrand-400 mx-auto mb-1"></i>
-                            <span class="text-xs text-slate-300 block font-medium" id="doc-file-label">Нажмите для загрузки фото</span>
-                            <span class="text-[10px] text-slate-500">JPG, PNG до 10 МБ</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="submitKYCVerification()" class="w-full bg-purpleBrand-700 hover:bg-purpleBrand-600 active:scale-98 text-white font-bold py-3 rounded-xl text-xs border border-purpleBrand-500/40 shadow-lg transition">
-                    Отправить на проверку Compliance
-                </button>
-            </div>
-        </section>
-
-        <!-- TAB 4: PROFILE & ORDERS -->
-        <section id="tab-profile" class="tab-content hidden space-y-4">
-            <!-- User Stats -->
-            <div class="glass-card p-4 rounded-3xl space-y-3">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 rounded-2xl bg-purple-gradient flex items-center justify-center font-bold text-white text-lg shadow-lg glow-brand">
-                        <i data-lucide="user" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-white text-sm" id="profile-tg-name">Telegram User</h3>
-                        <p class="text-xs font-mono text-purpleBrand-400">ID: <span id="profile-tg-id">784912049</span></p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-purpleBrand-900/60">
-                    <div class="bg-darkSlate-950/80 p-2.5 rounded-xl border border-purpleBrand-900/60">
-                        <span class="text-[10px] text-purpleBrand-400/80 block">Бонусный баланс</span>
-                        <span class="text-sm font-mono font-bold text-emerald-400">1,250 ₽</span>
-                    </div>
-                    <div class="bg-darkSlate-950/80 p-2.5 rounded-xl border border-purpleBrand-900/60">
-                        <span class="text-[10px] text-purpleBrand-400/80 block">Всего сделок</span>
-                        <span class="text-sm font-mono font-bold text-white">12 операций</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Referral Card -->
-            <div class="glass-card p-4 rounded-3xl space-y-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-white">Реферальная программа (0.5%)</span>
-                    <span class="text-[10px] text-purpleBrand-400 font-bold">Партнер B2C</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <input type="text" readonly value="https://t.me/PrimeFintechBot?start=ref784912" class="w-full bg-darkSlate-950 border border-purpleBrand-900/60 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none">
-                    <button onclick="copyReferralLink()" class="bg-purpleBrand-700 hover:bg-purpleBrand-600 text-white p-2 rounded-xl text-xs font-bold shrink-0 transition shadow">
-                        <i data-lucide="copy" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Transaction History -->
-            <div class="space-y-2">
-                <h3 class="text-xs font-bold text-purpleBrand-400/90 uppercase tracking-wider px-1">История заявок</h3>
-
-                <!-- Order Item 1 -->
-                <div class="glass-card p-3 rounded-2xl flex items-center justify-between text-xs">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 rounded-xl bg-purpleBrand-700/20 border border-purpleBrand-600/30 flex items-center justify-center text-emerald-400">
-                            <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
-                        </div>
-                        <div>
-                            <span class="font-bold text-white block">Покупка USDT (СБП)</span>
-                            <span class="text-[10px] text-slate-400 font-mono">20.10.2026 • 14:20</span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="font-mono font-bold text-white block">+155.40 USDT</span>
-                        <span class="text-[10px] text-emerald-400 font-semibold uppercase">Завершено</span>
-                    </div>
-                </div>
-
-                <!-- Order Item 2 -->
-                <div class="glass-card p-3 rounded-2xl flex items-center justify-between text-xs">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 rounded-xl bg-purpleBrand-700/20 border border-purpleBrand-600/30 flex items-center justify-center text-purpleBrand-400">
-                            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                        </div>
-                        <div>
-                            <span class="font-bold text-white block">Продажа TON (СБП)</span>
-                            <span class="text-[10px] text-slate-400 font-mono">18.10.2026 • 09:15</span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="font-mono font-bold text-white block">+12,500 RUB</span>
-                        <span class="text-[10px] text-emerald-400 font-semibold uppercase">Завершено</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 5: LEGAL & DOCUMENTS -->
-        <section id="tab-legal" class="tab-content hidden space-y-4">
-            <div>
-                <h2 class="text-base font-bold text-white">Правовая информация</h2>
-                <p class="text-xs text-purpleBrand-400/80">Реквизиты оператора и публичные оферты</p>
-            </div>
-
-            <!-- Legal Company Details Card -->
-            <div class="glass-card p-4 rounded-3xl space-y-2 text-xs">
-                <h3 class="font-bold text-purpleBrand-400 border-b border-purpleBrand-900/60 pb-2">ООО "ПРАЙМ ФИНТЕХ"</h3>
-                <div class="space-y-1.5 font-mono text-[11px] text-slate-300">
-                    <div class="flex justify-between"><span>ОГРН:</span> <span class="text-white">1207700389100</span></div>
-                    <div class="flex justify-between"><span>ИНН / КПП:</span> <span class="text-white">9705148201 / 770501001</span></div>
-                    <div class="flex justify-between"><span>Расчетный счет:</span> <span class="text-white">40702810900000012345</span></div>
-                    <div class="flex justify-between"><span>Банк:</span> <span class="text-white">АО "АЛЬФА-БАНК"</span></div>
-                    <div class="flex justify-between"><span>БИК:</span> <span class="text-white">044525593</span></div>
-                </div>
-            </div>
-
-            <!-- FAQ Accordion -->
-            <div class="space-y-2">
-                <h3 class="text-xs font-bold text-purpleBrand-400 px-1">Частые вопросы (FAQ)</h3>
-
-                <details class="glass-card rounded-2xl p-3 text-xs group">
-                    <summary class="font-semibold text-white cursor-pointer list-none flex justify-between items-center">
-                        <span>Как происходит оплата по СБП?</span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-purpleBrand-400 group-open:rotate-180 transition"></i>
-                    </summary>
-                    <p class="mt-2 text-[11px] text-slate-300 leading-relaxed border-t border-purpleBrand-900/60 pt-2">
-                        Формируется официальный QR-код НСПК СБП. При сканировании отображается ООО "ПРАЙМ ФИНТЕХ". Средства зачисляются моментально.
-                    </p>
-                </details>
-
-                <details class="glass-card rounded-2xl p-3 text-xs group">
-                    <summary class="font-semibold text-white cursor-pointer list-none flex justify-between items-center">
-                        <span>Время обработки заявки?</span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-purpleBrand-400 group-open:rotate-180 transition"></i>
-                    </summary>
-                    <p class="mt-2 text-[11px] text-slate-300 leading-relaxed border-t border-purpleBrand-900/60 pt-2">
-                        Отгрузка криптовалюты на ваш кошелек происходит автоматически в течение 2-5 минут после подтверждения безналичного платежа.
-                    </p>
-                </details>
-            </div>
-
-            <!-- Support Button -->
-            <a href="https://t.me/PrimeFintech_Support" target="_blank" class="w-full bg-darkSlate-850 hover:bg-darkSlate-800 border border-purpleBrand-800/60 text-slate-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center space-x-2 transition">
-                <i data-lucide="message-square" class="w-4 h-4 text-purpleBrand-400"></i>
-                <span>Связаться с оператором поддержки</span>
-            </a>
-        </section>
-
-    </main>
-
-    <!-- Bottom Navigation Bar (Telegram Dock Style) -->
-    <nav class="fixed bottom-0 left-0 right-0 z-50 bg-darkSlate-950/90 backdrop-blur-xl border-t border-purpleBrand-900/60 px-2 py-2">
-        <div class="max-w-lg mx-auto grid grid-cols-5 gap-1">
-            <button onclick="switchTab('exchange')" id="nav-exchange" class="nav-item active flex flex-col items-center py-1.5 text-purpleBrand-400 transition">
-                <i data-lucide="repeat" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Обмен</span>
-            </button>
-
-            <button onclick="switchTab('market')" id="nav-market" class="nav-item flex flex-col items-center py-1.5 text-slate-400 transition">
-                <i data-lucide="line-chart" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Курсы</span>
-            </button>
-
-            <button onclick="switchTab('kyc')" id="nav-kyc" class="nav-item flex flex-col items-center py-1.5 text-slate-400 transition">
-                <i data-lucide="shield-check" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">KYC</span>
-            </button>
-
-            <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center py-1.5 text-slate-400 transition">
-                <i data-lucide="user" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Профиль</span>
-            </button>
-
-            <button onclick="switchTab('legal')" id="nav-legal" class="nav-item flex flex-col items-center py-1.5 text-slate-400 transition">
-                <i data-lucide="file-text" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Оферта</span>
-            </button>
+            <button class="primary-btn" onclick="submitOrder()">Создать заявку</button>
         </div>
-    </nav>
 
-    <!-- ORDER PAYMENT MODAL (SBP QR) -->
-    <div id="modal-order-payment" class="fixed inset-0 z-50 bg-darkSlate-950/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
-        <div class="glass-card w-full max-w-md bg-darkSlate-900 border-t sm:border border-purpleBrand-800/80 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            
-            <div class="flex justify-between items-center border-b border-purpleBrand-900/60 pb-3">
-                <div class="flex items-center space-x-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <h3 class="font-bold text-sm text-white">Оплата по СБП (НСПК)</h3>
+        <!-- TAB 2: PROFILE -->
+        <div id="tab-profile" class="tab-content">
+            <div class="card">
+                <div class="card-title">Профиль пользователя</div>
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 20px;">👤</div>
+                    <div>
+                        <div id="user-name" style="font-weight: 600;">Пользователь</div>
+                        <div id="user-id" style="font-size: 12px; color: var(--text-muted);">ID: N/A</div>
+                    </div>
                 </div>
-                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-white p-1">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
             </div>
-
-            <!-- Timer -->
-            <div class="flex justify-between items-center text-xs font-mono bg-darkSlate-950 p-2.5 rounded-xl border border-purpleBrand-900/60">
-                <span class="text-slate-400">Заявка #ORD-2026-9921</span>
-                <span class="text-amber-400 font-bold" id="order-timer">14:59</span>
+            <div class="card">
+                <div class="card-title">Статус верификации</div>
+                <div style="font-size: 13px; color: var(--accent-light);">✓ Базовый доступ активирован</div>
             </div>
+        </div>
 
-            <!-- QR Box -->
-            <div class="bg-white p-4 rounded-2xl flex flex-col items-center justify-center shadow-2xl mx-auto w-48 h-48 relative" id="qrcode-container">
+        <!-- TAB 3: LEGAL -->
+        <div id="tab-legal" class="tab-content">
+            <div class="card">
+                <div class="card-title">Правовая информация</div>
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                    Сервис предоставляет услуги по обмену цифровых активов через P2C/B2C интеграции. Все платежи обрабатываются через СБП банков-партнеров.
+                </div>
             </div>
+        </div>
 
-            <p class="text-center text-[11px] text-slate-300">
-                Отсканируйте QR-код в приложении банка РФ или нажмите кнопку ниже:
-            </p>
+    </div>
 
-            <a id="sbp-deeplink-btn" href="#" target="_blank" class="w-full bg-purple-gradient text-white font-bold py-3 rounded-xl text-xs text-center block shadow-lg glow-brand">
-                Открыть приложение банка (СБП)
-            </a>
-
-            <!-- Details -->
-            <div class="bg-darkSlate-950/90 p-3 rounded-xl border border-purpleBrand-900/60 space-y-1 text-[11px] font-mono text-slate-300">
-                <div class="flex justify-between"><span>Получатель:</span> <span class="text-purpleBrand-400 font-bold">ООО "ПРАЙМ ФИНТЕХ"</span></div>
-                <div class="flex justify-between"><span>Сумма к оплате:</span> <span class="text-white font-bold" id="modal-pay-amount">15 000 RUB</span></div>
-                <div class="flex justify-between"><span>К зачислению:</span> <span class="text-emerald-400 font-bold" id="modal-crypto-amount">155.44 USDT</span></div>
-            </div>
-
-            <button onclick="confirmPaymentSent()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-xs shadow-lg transition">
-                Я оплатил счет СБП
-            </button>
+    <!-- BOTTOM NAVIGATION -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('exchange', this)">
+            <span class="nav-icon">🔄</span>
+            <span>Обмен</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="nav-icon">👤</span>
+            <span>Профиль</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('legal', this)">
+            <span class="nav-icon">📄</span>
+            <span>Оферта</span>
         </div>
     </div>
 
-    <!-- Application Engine Logic -->
     <script>
-        let appState = {
-            exchangeMode: 'buy',
-            selectedCrypto: 'USDT',
-            selectedNetwork: 'TRC20',
-            rates: {
-                USDT: { buy: 96.50, sell: 94.80 },
-                BTC: { buy: 6420150, sell: 6310000 },
-                ETH: { buy: 248900, sell: 242000 },
-                TON: { buy: 512.30, sell: 498.00 },
-                SOL: { buy: 14850, sell: 14200 }
-            },
-            timerInterval: null
-        };
-
-        const tg = window.Telegram?.WebApp;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (tg) {
-                tg.expand();
-                tg.ready();
-                if (tg.initDataUnsafe?.user) {
-                    const u = tg.initDataUnsafe.user;
-                    document.getElementById('user-tg-tag').innerText = `@${u.username || u.first_name}`;
-                    document.getElementById('profile-tg-name').innerText = `${u.first_name} ${u.last_name || ''}`;
-                    document.getElementById('profile-tg-id').innerText = u.id;
-                }
-            }
-
-            lucide.createIcons();
-            calculateExchange();
-        });
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('text-purpleBrand-400');
-                el.classList.add('text-slate-400');
-            });
-
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            if (activeNav) {
-                activeNav.classList.remove('text-slate-400');
-                activeNav.classList.add('text-purpleBrand-400');
-            }
-
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.selectionChanged();
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.expand();
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name || 'Пользователь';
+                document.getElementById('user-id').innerText = 'ID: ' + (tg.initDataUnsafe.user.id || 'N/A');
             }
         }
 
-        function setExchangeMode(mode) {
-            appState.exchangeMode = mode;
-            const buyBtn = document.getElementById('mode-buy-btn');
-            const sellBtn = document.getElementById('mode-sell-btn');
-            const sendBadge = document.getElementById('send-currency-badge');
-
-            if (mode === 'buy') {
-                buyBtn.className = "py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-purpleBrand-700 text-white shadow-lg glow-brand";
-                sellBtn.className = "py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
-                sendBadge.innerHTML = `<span>🇷🇺</span><span>RUB</span>`;
-                document.getElementById('label-destination').innerText = `Адрес получателя (${appState.selectedCrypto} ${appState.selectedCrypto === 'USDT' ? appState.selectedNetwork : ''})`;
-            } else {
-                sellBtn.className = "py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 bg-purpleBrand-700 text-white shadow-lg glow-brand";
-                buyBtn.className = "py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
-                sendBadge.innerHTML = `<span>🪙</span><span>${appState.selectedCrypto}</span>`;
-                document.getElementById('label-destination').innerText = "Номер телефона СБП / Номер карты (RUB)";
-            }
-
-            calculateExchange();
-        }
-
-        function toggleExchangeDirection() {
-            setExchangeMode(appState.exchangeMode === 'buy' ? 'sell' : 'buy');
-        }
-
-        function onCryptoAssetChange() {
-            appState.selectedCrypto = document.getElementById('select-crypto').value;
-            const netSelector = document.getElementById('network-selector-block');
-
-            if (appState.selectedCrypto === 'USDT') {
-                netSelector.classList.remove('hidden');
-            } else {
-                netSelector.classList.add('hidden');
-            }
-
-            if (appState.exchangeMode === 'buy') {
-                document.getElementById('label-destination').innerText = `Адрес получателя (${appState.selectedCrypto})`;
-            }
-
-            calculateExchange();
-        }
-
-        function selectNetwork(net) {
-            appState.selectedNetwork = net;
-            document.querySelectorAll('.network-btn').forEach(btn => {
-                btn.className = "network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-900/60 bg-darkSlate-950 text-slate-400 transition";
-            });
-
-            const activeBtn = document.getElementById(`net-btn-${net}`);
-            if (activeBtn) {
-                activeBtn.className = "network-btn py-2 text-xs font-bold rounded-xl border border-purpleBrand-500 bg-purpleBrand-700/30 text-purpleBrand-400 transition";
-            }
-
-            document.getElementById('label-destination').innerText = `Адрес получателя (USDT ${net})`;
-        }
+        let selectedNetwork = 'TRC20';
+        const rateRUB = 95.00;
 
         function calculateExchange() {
-            const sendInput = parseFloat(document.getElementById('input-send-amount').value) || 0;
-            const receiveInput = document.getElementById('input-receive-amount');
-            const rateLabel = document.getElementById('current-exchange-rate');
-
-            const crypto = appState.selectedCrypto;
-            const rates = appState.rates[crypto];
-
-            if (appState.exchangeMode === 'buy') {
-                const result = sendInput / rates.buy;
-                receiveInput.value = crypto === 'USDT' ? result.toFixed(2) : result.toFixed(6);
-                rateLabel.innerText = `1 ${crypto} = ${rates.buy.toLocaleString()} RUB`;
-            } else {
-                const result = sendInput * rates.sell;
-                receiveInput.value = result.toFixed(2);
-                rateLabel.innerText = `1 ${crypto} = ${rates.sell.toLocaleString()} RUB`;
-            }
-        }
-
-        function initiateOrderCreation() {
-            const dest = document.getElementById('input-destination-requisites').value;
-            const sendAmt = document.getElementById('input-send-amount').value;
-
-            if (!dest) {
-                alert("Укажите реквизиты или адрес кошелька!");
-                return;
-            }
-
-            const recAmt = document.getElementById('input-receive-amount').value;
-
-            document.getElementById('modal-pay-amount').innerText = `${parseFloat(sendAmt).toLocaleString()} RUB`;
-            document.getElementById('modal-crypto-amount').innerText = `${recAmt} ${appState.selectedCrypto}`;
-
-            const sbpPayload = `sbp://pay?type=02&bank=100000000007&sum=${sendAmt}&cur=RUB&crc=AB12`;
-            document.getElementById('sbp-deeplink-btn').href = sbpPayload;
-
-            const qrContainer = document.getElementById('qrcode-container');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, {
-                text: sbpPayload,
-                width: 160,
-                height: 160,
-                colorDark: "#110c1c",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
-            startOrderTimer(15 * 60);
-            document.getElementById('modal-order-payment').classList.remove('hidden');
-
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.notificationOccurred('success');
-            }
-        }
-
-        function closePaymentModal() {
-            document.getElementById('modal-order-payment').classList.add('hidden');
-            if (appState.timerInterval) clearInterval(appState.timerInterval);
-        }
-
-        function startOrderTimer(seconds) {
-            if (appState.timerInterval) clearInterval(appState.timerInterval);
-            let timer = seconds;
-            const display = document.getElementById('order-timer');
-
-            appState.timerInterval = setInterval(() => {
-                const m = Math.floor(timer / 60);
-                const s = timer % 60;
-                display.innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-
-                if (--timer < 0) {
-                    clearInterval(appState.timerInterval);
-                    display.innerText = "Истек";
-                }
-            }, 1000);
-        }
-
-        function confirmPaymentSent() {
-            alert("Заявка успешно отправлена! Ожидание проведения платежа ООО 'ПРАЙМ ФИНТЕХ'.");
-            closePaymentModal();
-        }
-
-        function simulateFileUpload() {
-            document.getElementById('doc-file-label').innerText = "passport_scan_main.jpg (Загружено)";
-            document.getElementById('file-dropzone-doc').classList.add('border-purpleBrand-500');
-        }
-
-        function submitKYCVerification() {
-            const name = document.getElementById('kyc-fullname').value;
-            if (!name) {
-                alert("Укажите ФИО по паспорту!");
-                return;
-            }
-
-            document.getElementById('kyc-level-title').innerText = "Уровень 2: На проверке";
-            document.getElementById('kyc-status-header-text').innerText = "В обработке";
-            document.getElementById('kyc-progress-bar').style.width = "66%";
+            const fromAmt = parseFloat(document.getElementById('from-amount').value) || 0;
+            const fromCurr = document.getElementById('from-currency').value;
             
-            alert("Документы успешно переданы в отдел Compliance!");
+            if (fromCurr === 'RUB') {
+                document.getElementById('to-amount').value = (fromAmt / rateRUB).toFixed(2);
+            } else {
+                document.getElementById('to-amount').value = (fromAmt * rateRUB).toFixed(2);
+            }
         }
 
-        function copyReferralLink() {
-            navigator.clipboard.writeText("https://t.me/PrimeFintechBot?start=ref784912");
-            alert("Реферальная ссылка скопирована!");
+        function toggleDirection() {
+            const fromSelect = document.getElementById('from-currency');
+            const toSelect = document.getElementById('to-currency');
+            
+            const temp = fromSelect.value;
+            fromSelect.value = temp === 'RUB' ? 'USDT' : 'RUB';
+            toSelect.value = temp === 'RUB' ? 'RUB' : 'USDT';
+            
+            calculateExchange();
+        }
+
+        function selectChip(element, network) {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+            selectedNetwork = network;
+        }
+
+        function switchTab(tabId, navEl) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            navEl.classList.add('active');
+        }
+
+        async function submitOrder() {
+            const payload = {
+                type: document.getElementById('from-currency').value === 'RUB' ? 'buy' : 'sell',
+                fromAmount: document.getElementById('from-amount').value,
+                fromCurrency: document.getElementById('from-currency').value,
+                toAmount: document.getElementById('to-amount').value,
+                toCurrency: document.getElementById('to-currency').value,
+                network: selectedNetwork,
+                destination: document.getElementById('destination-address').value,
+                user_id: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'demo_user'
+            };
+
+            if(!payload.destination) {
+                alert('Пожалуйста, укажите реквизиты получения!');
+                return;
+            }
+
+            try {
+                // Сюда вставляется URL твоего бэкенда
+                const response = await fetch('http://localhost:8000/api/order/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+                alert('Заявка успешно сформирована! Ожидайте СБП QR-код.');
+            } catch (e) {
+                alert('Заявка принята в обработку (локальный режим)!');
+            }
         }
     </script>
 </body>
