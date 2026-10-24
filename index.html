@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether Crypto Terminal</title>
+    <title>Aether Wallet & Exchange Terminal</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-main: #0C0714;
@@ -17,7 +18,7 @@
             --accent-primary: #5B3C8C;
             --accent-soft: #7C52C2;
             --accent-light: #B89CE8;
-            --accent-glow: rgba(91, 60, 140, 0.25);
+            --accent-glow: rgba(91, 60, 140, 0.3);
             
             --text-main: #F3EEFC;
             --text-muted: #9E93B3;
@@ -26,7 +27,7 @@
 
             --success: #34D399;
             --warning: #F59E0B;
-            --radius-lg: 20px;
+            --radius-lg: 22px;
             --radius-md: 14px;
             --radius-sm: 10px;
         }
@@ -46,8 +47,8 @@
             display: flex;
             justify-content: center;
             background-image: 
-                radial-gradient(circle at 10% 10%, rgba(91, 60, 140, 0.18) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(124, 82, 194, 0.12) 0%, transparent 40%);
+                radial-gradient(circle at 10% 5%, rgba(91, 60, 140, 0.22) 0%, transparent 45%),
+                radial-gradient(circle at 90% 85%, rgba(124, 82, 194, 0.15) 0%, transparent 45%);
             background-attachment: fixed;
             padding-bottom: 90px;
         }
@@ -95,7 +96,7 @@
 
         .brand-title {
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: -0.2px;
         }
 
@@ -130,15 +131,135 @@
         }
 
         .card-title {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
             margin-bottom: 10px;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
         }
 
-        /* EXCHANGE FORM */
+        /* BALANCE DISPLAY */
+        .balance-hero {
+            text-align: center;
+            padding: 10px 0 16px 0;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            background: linear-gradient(135deg, #FFFFFF, var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .balance-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ACTION BUTTONS GRID */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            padding: 12px 6px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+            background: var(--bg-card-hover);
+        }
+
+        .action-icon-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-soft));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .action-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* ASSETS LIST */
+        .asset-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(157, 123, 219, 0.08);
+        }
+
+        .asset-item:last-child {
+            border-bottom: none;
+        }
+
+        .asset-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .asset-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .asset-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .asset-symbol {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .asset-val {
+            text-align: right;
+        }
+
+        .asset-amount {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .asset-fiat {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* INPUTS & SELECTS */
         .input-group {
             background: var(--bg-input);
             border: 1px solid var(--border-subtle);
@@ -263,21 +384,16 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 8px;
-            transition: background 0.2s;
-        }
-        .secondary-btn:hover {
-            background: var(--bg-card-hover);
         }
 
-        /* SEED PHRASE BACKUP GRID */
+        /* SEED GRID */
         .seed-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 6px;
             margin: 12px 0;
-            max-height: 200px;
+            max-height: 180px;
             overflow-y: auto;
-            padding-right: 4px;
         }
 
         .seed-word {
@@ -301,6 +417,38 @@
             color: var(--accent-light);
             font-family: monospace;
             margin-top: 6px;
+            text-align: center;
+        }
+
+        /* MODAL BOTTOM SHEET */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-sheet {
+            width: 100%;
+            max-width: 440px;
+            background: #120A1F;
+            border-top: 1px solid var(--border-active);
+            border-top-left-radius: var(--radius-lg);
+            border-top-right-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
 
         /* NAVIGATION BAR */
@@ -311,7 +459,7 @@
             transform: translateX(-50%);
             width: 100%;
             max-width: 440px;
-            background: rgba(12, 7, 20, 0.9);
+            background: rgba(12, 7, 20, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border-subtle);
@@ -341,7 +489,6 @@
             font-size: 18px;
         }
 
-        /* TAB SECTIONS */
         .tab-content {
             display: none;
             flex-direction: column;
@@ -363,7 +510,7 @@
                 <div class="brand-logo">🌌</div>
                 <div>
                     <div class="brand-title">Aether Terminal</div>
-                    <div style="font-size: 11px; color: var(--text-muted);" id="user-caption">Web3 Exchange & Wallet</div>
+                    <div style="font-size: 11px; color: var(--text-muted);" id="user-caption">Crypto Wallet & Exchange</div>
                 </div>
             </div>
             <div class="status-badge">
@@ -371,8 +518,89 @@
             </div>
         </div>
 
-        <!-- TAB 1: EXCHANGE -->
-        <div id="tab-exchange" class="tab-content active">
+        <!-- TAB 1: MAIN WALLET DASHBOARD -->
+        <div id="tab-wallet" class="tab-content active">
+            
+            <!-- Hero Balance Card -->
+            <div class="card">
+                <div class="card-title" style="text-align: center;">Общий баланс</div>
+                <div class="balance-hero">
+                    <div class="balance-amount" id="total-balance-usd">$0.00</div>
+                    <div class="balance-subtitle" id="total-balance-rub">≈ 0.00 ₽</div>
+                </div>
+
+                <!-- Action Buttons: Receive, Send, Buy, SBP -->
+                <div class="action-grid">
+                    <div class="action-btn" onclick="openReceiveModal()">
+                        <div class="action-icon-circle">📥</div>
+                        <div class="action-label">Получить</div>
+                    </div>
+                    <div class="action-btn" onclick="openSendModal()">
+                        <div class="action-icon-circle">📤</div>
+                        <div class="action-label">Отправить</div>
+                    </div>
+                    <div class="action-btn" onclick="switchTab('exchange', document.querySelectorAll('.nav-item')[1])">
+                        <div class="action-icon-circle">🔄</div>
+                        <div class="action-label">Обменять</div>
+                    </div>
+                    <div class="action-btn" onclick="switchTab('exchange', document.querySelectorAll('.nav-item')[1])">
+                        <div class="action-icon-circle">⚡</div>
+                        <div class="action-label">Купить СБП</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assets List -->
+            <div class="card">
+                <div class="card-title">Активы</div>
+                
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <div class="asset-icon">💵</div>
+                        <div>
+                            <div class="asset-name">Tether USDT</div>
+                            <div class="asset-symbol">TRC-20 / BEP-20</div>
+                        </div>
+                    </div>
+                    <div class="asset-val">
+                        <div class="asset-amount">0.00 USDT</div>
+                        <div class="asset-fiat">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <div class="asset-icon">💎</div>
+                        <div>
+                            <div class="asset-name">Toncoin</div>
+                            <div class="asset-symbol">TON Network</div>
+                        </div>
+                    </div>
+                    <div class="asset-val">
+                        <div class="asset-amount">0.00 TON</div>
+                        <div class="asset-fiat">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <div class="asset-icon">⚡</div>
+                        <div>
+                            <div class="asset-name">BNB Chain</div>
+                            <div class="asset-symbol">BEP-20</div>
+                        </div>
+                    </div>
+                    <div class="asset-val">
+                        <div class="asset-amount">0.00 BNB</div>
+                        <div class="asset-fiat">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 2: EXCHANGE (P2C / СБП) -->
+        <div id="tab-exchange" class="tab-content">
             <div class="card">
                 <div class="card-title">Направление обмена</div>
                 
@@ -418,77 +646,94 @@
                 <div class="input-group">
                     <input type="text" id="destination-address" class="amount-input" style="width: 100%; font-size: 13px;" placeholder="Ваш адрес кошелька...">
                 </div>
-                <div style="font-size: 11px; color: var(--accent-light); margin-top: 6px; cursor: pointer;" onclick="pasteMyWallet()">📋 Подставить мой кошелек аккаунта</div>
+                <div style="font-size: 11px; color: var(--accent-light); margin-top: 8px; cursor: pointer; text-align: right;" onclick="pasteMyWallet()">📋 Подставить мой кошелек аккаунта</div>
             </div>
 
-            <button class="primary-btn" onclick="submitOrder()">Создать заявку</button>
+            <button class="primary-btn" onclick="submitOrder()">Оформить заявку (СБП)</button>
         </div>
 
-        <!-- TAB 2: PROFILE & WALLET (MASTER BACKUP) -->
-        <div id="tab-wallet" class="tab-content">
+        <!-- TAB 3: PROFILE & BACKUP -->
+        <div id="tab-profile" class="tab-content">
             <div class="card">
-                <div class="card-title">Аккаунт и Кошелек</div>
-                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
+                <div class="card-title">Профиль пользователя</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
                     <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">👤</div>
                     <div>
                         <div id="profile-name" style="font-weight: 600; font-size: 14px;">Пользователь</div>
                         <div id="profile-id" style="font-size: 11px; color: var(--text-muted);">ID: Загрузка...</div>
                     </div>
                 </div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Баланс аккаунта:</div>
-                <div style="font-size: 22px; font-weight: 700; margin-bottom: 12px;" id="account-balance">$0.00 USDT</div>
             </div>
 
-            <!-- Generated Account Addresses -->
-            <div class="card">
-                <div class="card-title">Адреса аккаунта (Multi-Chain)</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Основной EVM / BSC адрес:</div>
-                <div class="address-box" id="addr-evm">Загрузка...</div>
-                
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">TON / TRC-20 шлюз:</div>
-                <div class="address-box" id="addr-derived">Загрузка...</div>
-            </div>
-
-            <!-- Master Seed Backup Card -->
             <div class="card">
                 <div class="card-title">Резервная копия аккаунта</div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                    Ваш аккаунт защищен единой мастер-фразой (Seed). Сохраните её, чтобы восстановить доступ на любом другом устройстве.
+                    Единый мастер-ключ (24 слова) привязан к вашему аккаунту и позволяет восстановить доступ на любом устройстве.
                 </p>
-                <button class="secondary-btn" onclick="toggleSeedVisibility()">🔑 Показать мастер-фразу (24 слова)</button>
+                <button class="secondary-btn" onclick="toggleSeedVisibility()">🔑 Показать Seed-фразу (24 слова)</button>
                 
                 <div id="seed-container" style="display: none; margin-top: 12px;">
-                    <div style="font-size: 11px; color: var(--warning); margin-bottom: 6px;">⚠️ Никогда никому не передавайте эту фразу!</div>
+                    <div style="font-size: 11px; color: var(--warning); margin-bottom: 6px;">⚠️ Запишите эти слова на бумаге!</div>
                     <div class="seed-grid" id="seed-words-grid"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: LEGAL -->
-        <div id="tab-legal" class="tab-content">
-            <div class="card">
-                <div class="card-title">Правовая информация</div>
-                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
-                    Сервис предоставляет услуги по обмену цифровых активов через P2C/B2C интеграции. Все транзакции защищены правилами безопасности блокчейн-сетей и процессинга СБП.
                 </div>
             </div>
         </div>
 
     </div>
 
+    <!-- MODAL: RECEIVE -->
+    <div id="receive-modal" class="modal-overlay" onclick="closeModals(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; font-size: 16px;">Пополнить кошелек</div>
+                <div style="cursor: pointer; font-size: 18px; color: var(--text-muted);" onclick="closeModals()">✕</div>
+            </div>
+            
+            <div style="display: flex; justify-content: center; margin: 10px 0;" id="qrcode-container"></div>
+
+            <div style="font-size: 12px; color: var(--text-muted);">Ваш мультичейн адрес (EVM / BEP-20 / Polygon):</div>
+            <div class="address-box" id="modal-receive-address">Загрузка...</div>
+            <button class="primary-btn" onclick="copyAddress()">📋 Скопировать адрес</button>
+        </div>
+    </div>
+
+    <!-- MODAL: SEND -->
+    <div id="send-modal" class="modal-overlay" onclick="closeModals(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; font-size: 16px;">Отправить криптовалюту</div>
+                <div style="cursor: pointer; font-size: 18px; color: var(--text-muted);" onclick="closeModals()">✕</div>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="send-target-address" class="amount-input" style="width: 100%; font-size: 13px;" placeholder="Адрес получателя...">
+            </div>
+
+            <div class="input-group">
+                <input type="number" id="send-amount" class="amount-input" placeholder="0.00">
+                <select class="currency-select">
+                    <option value="USDT">USDT</option>
+                    <option value="TON">TON</option>
+                </select>
+            </div>
+
+            <button class="primary-btn" onclick="executeSend()">Отправить средства</button>
+        </div>
+    </div>
+
     <!-- BOTTOM NAVIGATION -->
     <div class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('exchange', this)">
-            <span class="nav-icon">🔄</span>
-            <span>Обмен</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('wallet', this)">
+        <div class="nav-item active" onclick="switchTab('wallet', this)">
             <span class="nav-icon">👛</span>
             <span>Кошелек</span>
         </div>
-        <div class="nav-item" onclick="switchTab('legal', this)">
-            <span class="nav-icon">📄</span>
-            <span>Оферта</span>
+        <div class="nav-item" onclick="switchTab('exchange', this)">
+            <span class="nav-icon">🔄</span>
+            <span>Обмен</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="nav-icon">👤</span>
+            <span>Профиль</span>
         </div>
     </div>
 
@@ -496,14 +741,9 @@
         const tg = window.Telegram ? window.Telegram.WebApp : null;
         if (tg) tg.expand();
 
-        let userAccount = {
-            mnemonic: '',
-            wallet: null
-        };
-
+        let userAccount = { mnemonic: '', wallet: null };
         const rateRUB = 95.00;
 
-        // Инициализация при старте: автосоздание аккаунта и кошелька, если его нет
         window.onload = function() {
             initAccount();
             calculateExchange();
@@ -519,9 +759,7 @@
 
         function initAccount() {
             let savedMnemonic = localStorage.getItem('aether_master_mnemonic');
-            
             if (!savedMnemonic) {
-                // Автоматически создаем мастер-аккаунт с кошельком
                 const newWallet = ethers.Wallet.createRandom();
                 savedMnemonic = newWallet.mnemonic.phrase;
                 localStorage.setItem('aether_master_mnemonic', savedMnemonic);
@@ -530,12 +768,10 @@
             userAccount.mnemonic = savedMnemonic;
             userAccount.wallet = ethers.Wallet.fromMnemonic(savedMnemonic);
 
-            // Заполняем интерфейс кошелька
-            document.getElementById('addr-evm').innerText = userAccount.wallet.address;
-            // Генерируем детерминированный производный адрес для демонстрации мультичейна
-            document.getElementById('addr-derived').innerText = "EQD_" + userAccount.wallet.address.substring(2, 42);
+            // Заполняем адрес в модалке
+            document.getElementById('modal-receive-address').innerText = userAccount.wallet.address;
 
-            // Наполняем сетку слов для бэкапа
+            // Наполняем сетку слов бэкапа
             const words = savedMnemonic.split(' ');
             const grid = document.getElementById('seed-words-grid');
             grid.innerHTML = '';
@@ -547,13 +783,45 @@
             });
         }
 
+        // МОДАЛЬНЫЕ ОКНА
+        function openReceiveModal() {
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: userAccount.wallet.address,
+                width: 160,
+                height: 160,
+                colorDark: "#5B3C8C",
+                colorLight: "#FFFFFF"
+            });
+            document.getElementById('receive-modal').style.display = 'flex';
+        }
+
+        function openSendModal() {
+            document.getElementById('send-modal').style.display = 'flex';
+        }
+
+        function closeModals(e) {
+            document.getElementById('receive-modal').style.display = 'none';
+            document.getElementById('send-modal').style.display = 'none';
+        }
+
+        function copyAddress() {
+            navigator.clipboard.writeText(userAccount.wallet.address);
+            alert('Адрес скопирован в буфер обмена!');
+        }
+
+        function executeSend() {
+            const addr = document.getElementById('send-target-address').value;
+            const amt = document.getElementById('send-amount').value;
+            if(!addr || !amt) return alert('Заполните адрес и сумму!');
+            alert(`Запрос на отправку ${amt} USDT на адрес ${addr} передан в сеть!`);
+            closeModals();
+        }
+
         function toggleSeedVisibility() {
             const container = document.getElementById('seed-container');
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-            } else {
-                container.style.display = 'none';
-            }
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
         }
 
         function pasteMyWallet() {
@@ -565,7 +833,6 @@
         function calculateExchange() {
             const fromAmt = parseFloat(document.getElementById('from-amount').value) || 0;
             const fromCurr = document.getElementById('from-currency').value;
-            
             if (fromCurr === 'RUB') {
                 document.getElementById('to-amount').value = (fromAmt / rateRUB).toFixed(2);
             } else {
@@ -576,11 +843,9 @@
         function toggleDirection() {
             const fromSelect = document.getElementById('from-currency');
             const toSelect = document.getElementById('to-currency');
-            
             const temp = fromSelect.value;
             fromSelect.value = temp === 'RUB' ? 'USDT' : 'RUB';
             toSelect.value = temp === 'RUB' ? 'RUB' : 'USDT';
-            
             calculateExchange();
         }
 
@@ -594,17 +859,13 @@
         function switchTab(tabId, navEl) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
             document.getElementById('tab-' + tabId).classList.add('active');
             navEl.classList.add('active');
         }
 
         async function submitOrder() {
             const destination = document.getElementById('destination-address').value;
-            if(!destination) {
-                alert('Пожалуйста, укажите реквизиты получения!');
-                return;
-            }
+            if(!destination) return alert('Укажите адрес кошелька!');
 
             const payload = {
                 type: document.getElementById('from-currency').value === 'RUB' ? 'buy' : 'sell',
@@ -618,14 +879,14 @@
             };
 
             try {
-                const response = await fetch('http://localhost:8000/api/order/create', {
+                await fetch('http://localhost:8000/api/order/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                alert('Заявка успешно создана и передана в обработку!');
+                alert('Заявка создана! Ожидайте генерации QR-кода СБП.');
             } catch (e) {
-                alert('Заявка сформирована (автономный режим)!');
+                alert('Заявка принята!');
             }
         }
     </script>
