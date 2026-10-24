@@ -1,695 +1,453 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether Multi-Chain Terminal</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main: #0A0512;
-            --bg-card: rgba(255, 255, 255, 0.035);
-            --bg-card-hover: rgba(255, 255, 255, 0.06);
-            --bg-input: rgba(18, 12, 30, 0.85);
-            
-            --accent-primary: #5B3C8C;
-            --accent-soft: #7C52C2;
-            --accent-light: #B89CE8;
-            --accent-glow: rgba(91, 60, 140, 0.35);
-            
-            --text-main: #F3EEFC;
-            --text-muted: #9E93B3;
-            --border-subtle: rgba(157, 123, 219, 0.12);
-            --border-active: rgba(184, 156, 232, 0.4);
-
-            --success: #34D399;
-            --warning: #F59E0B;
-            --danger: #EF4444;
-            --radius-lg: 24px;
-            --radius-md: 16px;
-            --radius-sm: 12px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background: var(--bg-main);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            background-image: 
-                radial-gradient(circle at 15% 10%, rgba(91, 60, 140, 0.25) 0%, transparent 45%),
-                radial-gradient(circle at 85% 90%, rgba(124, 82, 194, 0.18) 0%, transparent 45%);
-            background-attachment: fixed;
-            padding-bottom: 100px;
-            overflow-x: hidden;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 440px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-        }
-
-        .brand { display: flex; align-items: center; gap: 10px; }
-
-        .brand-avatar {
-            width: 38px; height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-soft));
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 13px;
-            box-shadow: 0 4px 12px var(--accent-glow);
-            border: 1px solid var(--border-active);
-        }
-
-        .brand-title { font-size: 15px; font-weight: 700; }
-
-        .sbp-btn {
-            background: rgba(91, 60, 140, 0.2);
-            border: 1px solid var(--border-active);
-            color: var(--accent-light);
-            padding: 6px 12px; border-radius: 20px;
-            font-size: 12px; font-weight: 600; cursor: pointer;
-            transition: transform 0.15s ease;
-        }
-        .sbp-btn:active { transform: scale(0.95); }
-
-        .card {
-            background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: 18px;
-            position: relative; overflow: hidden;
-        }
-
-        .card-title {
-            font-size: 11px; color: var(--text-muted);
-            margin-bottom: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.6px;
-        }
-
-        .balance-hero { text-align: center; padding: 6px 0 14px 0; }
-
-        .balance-amount {
-            font-size: 36px; font-weight: 800; letter-spacing: -0.8px;
-            background: linear-gradient(135deg, #FFFFFF 30%, var(--accent-light) 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
-        .balance-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-        .action-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr);
-            gap: 10px; margin-top: 14px;
-        }
-
-        .action-btn {
-            display: flex; flex-direction: column; align-items: center;
-            gap: 6px; background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-subtle); padding: 12px 4px;
-            border-radius: var(--radius-md); cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        .action-btn:active { transform: scale(0.92); }
-
-        .action-icon-circle {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-soft));
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px var(--accent-glow);
-        }
-
-        .svg-icon {
-            width: 18px; height: 18px; stroke: #FFFFFF; fill: none;
-            stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
-        }
-
-        .action-label { font-size: 11px; font-weight: 600; color: var(--text-main); }
-
-        .asset-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
-
-        .asset-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 14px; background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-            cursor: pointer; transition: transform 0.15s ease;
-        }
-        .asset-item:active { transform: scale(0.98); }
-
-        .asset-info { display: flex; align-items: center; gap: 12px; }
-        .asset-icon-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-        .asset-name { font-size: 13px; font-weight: 600; }
-        .asset-symbol { font-size: 10px; color: var(--text-muted); }
-        .asset-val { text-align: right; }
-        .asset-amount { font-size: 13px; font-weight: 600; }
-        .asset-fiat { font-size: 10px; color: var(--text-muted); }
-
-        .input-group {
-            background: var(--bg-input);
-            border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-            padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
-        }
-
-        .input-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-
-        .amount-input, .select-input {
-            background: transparent; border: none; outline: none;
-            color: var(--text-main); font-size: 15px; font-weight: 600; width: 100%;
-        }
-
-        .select-input option { background: #130B22; color: var(--text-main); }
-
-        .primary-btn {
-            background: linear-gradient(135deg, #5B3C8C, #7C52C2);
-            border: none; width: 100%; padding: 16px; border-radius: var(--radius-md);
-            color: white; font-size: 15px; font-weight: 600; cursor: pointer;
-            box-shadow: 0 6px 20px var(--accent-glow); margin-top: 6px;
-            transition: transform 0.15s ease;
-        }
-        .primary-btn:active { transform: scale(0.96); }
-
-        .nav-bar {
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-            width: 100%; max-width: 440px; background: rgba(12, 7, 20, 0.92);
-            backdrop-filter: blur(20px); border-top: 1px solid var(--border-subtle);
-            display: flex; justify-content: space-around; align-items: center;
-            padding: 8px 10px 20px 10px; z-index: 100;
-        }
-
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-muted); font-size: 10px; cursor: pointer; flex: 1; }
-        .nav-item.active { color: var(--accent-light); }
-        .nav-item.active .svg-nav-icon { stroke: var(--accent-light); }
-
-        .svg-nav-icon { width: 20px; height: 20px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
-        .nav-center-btn {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-soft));
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 16px var(--accent-glow); border: 3px solid var(--bg-main);
-            margin-top: -16px; cursor: pointer;
-        }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0); backdrop-filter: blur(0px);
-            z-index: 200; display: flex; justify-content: center; align-items: flex-end;
-            visibility: hidden; opacity: 0; transition: all 0.35s ease;
-        }
-        .modal-overlay.active { visibility: visible; opacity: 1; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); }
-
-        .modal-sheet {
-            width: 100%; max-width: 440px; background: #130B22;
-            border-top: 1px solid var(--border-active);
-            border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);
-            padding: 12px 20px 24px 20px; display: flex; flex-direction: column; gap: 12px;
-            max-height: 85vh; overflow-y: auto; transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-        }
-        .modal-overlay.active .modal-sheet { transform: translateY(0); }
-        .modal-swipe-pill { width: 36px; height: 4px; background: rgba(255, 255, 255, 0.2); border-radius: 2px; align-self: center; margin-bottom: 8px; }
-
-        .tab-content { display: none; flex-direction: column; gap: 16px; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .tab-content.active { display: flex; }
-
-        .address-box { background: var(--bg-input); border: 1px dashed var(--border-active); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 11px; word-break: break-all; color: var(--accent-light); font-family: monospace; text-align: center; }
-        .fee-info { font-size: 11px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; padding: 0 4px; }
-        .fee-row { display: flex; justify-content: space-between; }
-        .network-hint { font-size: 10px; color: var(--success); margin-top: 2px; display: none; }
-        .gas-warning { font-size: 11px; color: var(--success); background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); padding: 8px 10px; border-radius: var(--radius-sm); display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aether Multi-Chain Wallet</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0512;--card:rgba(255,255,255,.04);--inp:rgba(18,12,30,.85);--ap:#5B3C8C;--as:#7C52C2;--al:#B89CE8;--gl:rgba(91,60,140,.35);--tx:#F3EEFC;--mu:#9E93B3;--bd:rgba(157,123,219,.14);--ba:rgba(184,156,232,.4);--ok:#34D399;--wa:#F59E0B;--er:#EF4444}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);min-height:100vh;display:flex;justify-content:center;background-image:radial-gradient(circle at 15% 8%,rgba(91,60,140,.3),transparent 45%),radial-gradient(circle at 90% 85%,rgba(124,82,194,.2),transparent 45%);background-attachment:fixed;padding-bottom:110px;overflow-x:hidden}
+.app{width:100%;max-width:440px;padding:16px;display:flex;flex-direction:column;gap:14px}
+svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr{display:flex;align-items:center;gap:12px;padding:4px 4px 0}
+.avt{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--ap),var(--as));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 4px 14px var(--gl)}
+.chip{margin-left:auto;font:600 11px monospace;color:var(--al);background:rgba(91,60,140,.2);border:1px solid var(--ba);padding:7px 12px;border-radius:20px;cursor:pointer}
+.card{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:26px;padding:18px}
+.hero{background:linear-gradient(145deg,rgba(91,60,140,.55),rgba(124,82,194,.18) 60%,rgba(255,255,255,.03));border-color:var(--ba);box-shadow:0 12px 40px var(--gl);text-align:center;padding:24px 18px 18px}
+.lbl{font-size:12px;color:var(--al);font-weight:600;letter-spacing:.3px}
+.bal{font-size:40px;font-weight:800;letter-spacing:-1px;margin:6px 0 2px}
+.sub{font-size:11px;color:var(--mu)}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
+.ab{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11px;font-weight:600;cursor:pointer}
+.ab:active{transform:scale(.92)}
+.aic{width:50px;height:50px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
+.ct{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between}
+.list{display:flex;flex-direction:column;gap:8px}
+.ai,.hi{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:18px}
+.ai{cursor:pointer}.ai:active{transform:scale(.98)}.ai.z{opacity:.55}
+.co{position:relative;width:40px;height:40px;flex:none}
+.co i{position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,var(--ap),var(--as));display:flex;align-items:center;justify-content:center;font:700 15px sans-serif}
+.co img{position:absolute;inset:0;width:40px;height:40px;border-radius:50%;background:#1b1230}
+.nb{position:absolute;right:-3px;bottom:-3px;width:17px;height:17px;border-radius:50%;border:2px solid #0f0819;font:800 8px sans-serif;color:#fff;display:flex;align-items:center;justify-content:center}
+.BSC{background:#F3BA2F;color:#000}.ETH{background:#627EEA}.POL{background:#8247E5}.ARB{background:#28A0F0}.TRX{background:#EB0029}
+.m{flex:1;min-width:0}.t{font-size:14px;font-weight:600}.s{font-size:11px;color:var(--mu);margin-top:2px}
+.v{text-align:right}.a{font-size:13px;font-weight:700}.a.in{color:var(--ok)}
+.bdg{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:3px}
+.ok{background:rgba(52,211,153,.15);color:var(--ok)}.pending{background:rgba(245,158,11,.15);color:var(--wa)}.fail{background:rgba(239,68,68,.15);color:var(--er)}
+.hic{width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.hic.in{background:rgba(52,211,153,.15);color:var(--ok)}.hic.out{background:rgba(239,68,68,.15);color:var(--er)}
+.ig{background:var(--inp);border:1px solid var(--bd);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.il{font-size:11px;color:var(--mu);font-weight:600}
+input,select{background:transparent;border:none;outline:none;color:var(--tx);font-size:15px;font-weight:600;width:100%}
+select option{background:#130B22}
+.pb,.sb{border:none;width:100%;padding:15px;border-radius:16px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px}
+.pb{background:linear-gradient(135deg,#5B3C8C,#7C52C2);box-shadow:0 6px 20px var(--gl)}
+.sb{background:rgba(255,255,255,.06);border:1px solid var(--bd);font-size:13px}
+.pb:disabled{opacity:.5}.pb:active,.sb:active{transform:scale(.97)}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;background:rgba(12,7,20,.92);backdrop-filter:blur(20px);border-top:1px solid var(--bd);display:flex;justify-content:space-around;align-items:center;padding:8px 6px 22px;z-index:100}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--mu);font-size:10px;font-weight:600;cursor:pointer}.ni.active{color:var(--al)}
+.nc{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--ap),var(--as));display:flex;align-items:center;justify-content:center;border:4px solid var(--bg);margin-top:-22px;cursor:pointer;box-shadow:0 6px 18px var(--gl)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);z-index:200;display:flex;justify-content:center;align-items:flex-end;visibility:hidden;opacity:0;transition:.3s}
+.mo.active{visibility:visible;opacity:1}
+.sheet{width:100%;max-width:440px;background:#130B22;border-top:1px solid var(--ba);border-radius:28px 28px 0 0;padding:18px 20px 26px;display:flex;flex-direction:column;gap:8px;max-height:90vh;overflow-y:auto}
+.sh{display:flex;justify-content:space-between;align-items:center;font-size:17px;font-weight:700;margin-bottom:4px}.sh span{cursor:pointer;color:var(--mu);padding:4px 8px}
+.tab{display:none;flex-direction:column;gap:14px}.tab.active{display:flex}
+.addr{background:var(--inp);border:1px dashed var(--ba);padding:10px 12px;border-radius:14px;font:11px monospace;word-break:break-all;color:var(--al);text-align:center}
+.mu{font-size:11px;color:var(--mu);margin:10px 0 4px}
+.empty{text-align:center;padding:26px 10px;color:var(--mu);font-size:13px;line-height:1.5}
+.info{font-size:12px;color:var(--mu);line-height:1.5;padding:2px 4px}
+.rowx{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}.rt b{display:block;font-size:14px;margin-bottom:3px}.rt span{font-size:11px;color:var(--mu);line-height:1.45}.rowx .sb{width:auto;margin:0;padding:10px 14px;flex:none}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}.sg div{background:var(--inp);border:1px solid var(--bd);border-radius:12px;padding:10px;font-size:13px;font-weight:600}.sg small{color:var(--mu);margin-right:5px}
+.qr{display:flex;justify-content:center;margin:8px 0}.qr>div{background:#fff;padding:10px;border-radius:16px}
+</style>
 </head>
 <body>
+<div class="app">
+  <div class="hdr"><div class="avt" id="ini">AF</div><div><div style="font-size:15px;font-weight:700">Aether Wallet</div><div class="sub" id="uname">Multi-chain</div></div><div class="chip" id="chip" onclick="openModal('dep')"></div></div>
 
-    <div class="app-container">
-        <div class="header">
-            <div class="brand">
-                <div class="brand-avatar" id="header-avatar-initials">AF</div>
-                <div>
-                    <div class="brand-title">Aether Multi-Chain</div>
-                    <div style="font-size: 10px; color: var(--text-muted);" id="header-username">@user</div>
-                </div>
-            </div>
-            <div class="sbp-btn" onclick="openModal('deposit-modal')"><span>СБП</span></div>
-        </div>
-
-        <div id="tab-home" class="tab-content active">
-            <div class="card">
-                <div class="card-title" style="text-align: center;">Суммарный баланс (Auto-Bridge Enabled)</div>
-                <div class="balance-hero">
-                    <div class="balance-amount" id="total-balance-usd">$0.00</div>
-                    <div class="balance-subtitle" id="total-balance-rub">≈ 0.00 ₽</div>
-                </div>
-
-                <div class="action-grid">
-                    <div class="action-btn" onclick="openSendModal()"><div class="action-icon-circle"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div><div class="action-label">Отправить</div></div>
-                    <div class="action-btn" onclick="openModal('deposit-modal')"><div class="action-icon-circle"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div><div class="action-label">Пополнить</div></div>
-                    <div class="action-btn" onclick="switchTab('exchange', document.querySelectorAll('.nav-item')[3])"><div class="action-icon-circle"><svg class="svg-icon" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></div><div class="action-label">Обмен</div></div>
-                    <div class="action-btn" onclick="switchTab('cards', document.querySelectorAll('.nav-item')[3])"><div class="action-icon-circle"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div><div class="action-label">Карты</div></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title" style="display: flex; justify-content: space-between;">
-                    <span>Активы (ТОП-20)</span>
-                    <span style="color: var(--success); font-size: 9px;">● Auto Bridge API Live</span>
-                </div>
-                <div class="asset-list" id="asset-list-container"></div>
-            </div>
-        </div>
-
-        <div id="tab-history" class="tab-content"><div class="card" style="text-align: center; padding: 40px 18px; color: var(--text-muted);"><div style="font-size: 13px;">История транзакций пуста</div></div></div>
-
-        <div id="tab-cards" class="tab-content">
-            <div class="card" style="background: linear-gradient(135deg, #1A102F, #2A1A4A); border: 1px solid var(--border-active);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div style="font-weight: 700; font-size: 14px;">Aether Virtual Card</div><div style="font-size: 12px; color: var(--accent-light);">VISA / MC</div>
-                </div>
-                <div style="font-size: 20px; font-weight: 700; letter-spacing: 2px; margin-bottom: 16px;">•••• •••• •••• 9921</div>
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);"><span>HOLDER: WEB3 USER</span><span>12/28</span></div>
-            </div>
-            <button class="primary-btn" onclick="triggerHaptic(); alert('Выпуск виртуальной карты активирован!')">+ Создать новую карту</button>
-        </div>
-
-        <div id="tab-exchange" class="tab-content">
-            <div class="card">
-                <div class="card-title">Мгновенный обмен</div>
-                <div class="input-group">
-                    <span class="input-label">Вы отдаете</span>
-                    <input type="number" id="ex-from" class="amount-input" value="10000" oninput="calcExchange()">
-                    <select id="ex-curr-from" class="select-input" onchange="calcExchange()"><option value="RUB">RUB (СБП)</option><option value="USDT">USDT</option></select>
-                </div>
-                <div class="input-group">
-                    <span class="input-label">Вы получаете</span>
-                    <input type="number" id="ex-to" class="amount-input" readonly>
-                    <select id="ex-curr-to" class="select-input" disabled><option value="USDT">USDT</option><option value="RUB">RUB</option></select>
-                </div>
-                <button class="primary-btn" onclick="triggerHaptic(); alert('Заявка создана!')">Создать заявку СБП</button>
-            </div>
-        </div>
-
-        <div id="tab-menu" class="tab-content">
-            <div class="card">
-                <div class="card-title">Кошельки аккаунта по сетям</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">EVM (ETH, BSC, Polygon):</div>
-                <div class="address-box" id="addr-evm-display">Загрузка...</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">TRON Network (TRC-20):</div>
-                <div class="address-box" id="addr-tron-display">Загрузка...</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">TON Network:</div>
-                <div class="address-box" id="addr-ton-display">Загрузка...</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">Solana Network:</div>
-                <div class="address-box" id="addr-sol-display">Загрузка...</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">Bitcoin Network:</div>
-                <div class="address-box" id="addr-btc-display">Загрузка...</div>
-            </div>
-        </div>
+  <div id="tab-home" class="tab active">
+    <div class="card hero">
+      <div class="lbl">Общий баланс</div><div class="bal" id="usd">$0.00</div><div class="sub" id="upd">Синхронизация…</div>
+      <div class="acts">
+        <div class="ab" onclick="openSend()"><div class="aic" data-i="send"></div>Отправить</div>
+        <div class="ab" onclick="openModal('dep')"><div class="aic" data-i="recv"></div>Получить</div>
+        <div class="ab" onclick="tab('swap')"><div class="aic" data-i="swap"></div>Обмен</div>
+        <div class="ab" onclick="openModal('buy')"><div class="aic" data-i="buy"></div>Купить</div>
+      </div>
     </div>
+    <div class="card"><div class="ct">Активы</div><div class="list" id="assets"></div></div>
+  </div>
 
-    <!-- MODAL: SEND WITH AUTOMATIC BRIDGE -->
-    <div id="send-modal" class="modal-overlay" onclick="closeModals(event)">
-        <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div class="modal-swipe-pill"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <div style="font-weight: 700; font-size: 16px;">Отправить монету</div>
-                <div style="cursor: pointer; color: var(--text-muted); padding: 4px 8px; font-weight: 700;" onclick="closeModals()">✕</div>
-            </div>
+  <div id="tab-history" class="tab"><div class="card"><div class="ct">История операций</div><div class="list" id="hist"></div></div></div>
 
-            <div class="input-group">
-                <span class="input-label">Выберите монету</span>
-                <select id="send-asset-select" class="select-input" onchange="onSendAssetChange()"></select>
-            </div>
-
-            <div class="input-group">
-                <span class="input-label">Исходная сеть монеты</span>
-                <select id="send-network-select" class="select-input" onchange="onSendNetworkChange()"></select>
-            </div>
-
-            <div class="input-group">
-                <span class="input-label">Адрес получателя (Любая сеть)</span>
-                <input type="text" id="send-target-addr" class="amount-input" placeholder="Вставьте адрес получателя..." oninput="onRecipientAddressInput(this.value)">
-                <div id="detected-network-hint" class="network-hint">Маршрут определен</div>
-            </div>
-
-            <div class="input-group">
-                <span class="input-label">Сумма отправки</span>
-                <input type="number" id="send-target-amount" class="amount-input" placeholder="0.00">
-            </div>
-
-            <div class="fee-info">
-                <div class="fee-row">
-                    <span>Маршрутизация:</span>
-                    <span id="route-type-label" style="color: var(--success); font-weight: 600;">Прямая отправка</span>
-                </div>
-                <div class="fee-row">
-                    <span>Итоговая комиссия:</span>
-                    <span id="estimated-fee">~ $0.20 (Включена)</span>
-                </div>
-            </div>
-
-            <div id="gas-warning-box" class="gas-warning"></div>
-
-            <button class="primary-btn" id="confirm-send-btn" onclick="executeAutoBridgeSend()">Подтвердить перевод</button>
-        </div>
+  <div id="tab-swap" class="tab">
+    <div class="card">
+      <div class="ct">Обмен и кроссчейн-мост</div>
+      <div class="ig"><span class="il">Отдаёте</span><select id="w-from"></select></div>
+      <div class="ig"><span class="il">Сумма</span><input id="w-amt" type="number" inputmode="decimal" placeholder="0.00"></div>
+      <div class="ig"><span class="il">Сеть получения</span><select id="w-tn" onchange="fillTo()"></select></div>
+      <div class="ig"><span class="il">Получаете</span><select id="w-tt"></select></div>
+      <div class="info" id="w-info">Маршрут подбирается автоматически (DEX и мосты через LI.FI). Получатель — ваш адрес в выбранной сети.</div>
+      <button class="sb" id="w-q" onclick="swapQuote()">Получить котировку</button>
+      <button class="pb" id="w-go" onclick="swapExec()" disabled>Подтвердить обмен</button>
     </div>
+  </div>
 
-    <!-- MODAL: DEPOSIT -->
-    <div id="deposit-modal" class="modal-overlay" onclick="closeModals(event)">
-        <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div class="modal-swipe-pill"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <div style="font-weight: 700; font-size: 16px;">Пополнение баланса</div>
-                <div style="cursor: pointer; color: var(--text-muted); padding: 4px 8px; font-weight: 700;" onclick="closeModals()">✕</div>
-            </div>
-            <div class="input-group">
-                <span class="input-label">Выберите монету для пополнения</span>
-                <select id="deposit-asset-select" class="select-input" onchange="onDepositAssetChange()"></select>
-            </div>
-            <div class="input-group">
-                <span class="input-label">Сеть пополнения</span>
-                <select id="deposit-network-select" class="select-input" onchange="updateDepositQR()"></select>
-            </div>
-            <div style="display: flex; justify-content: center; margin: 10px 0;" id="qr-container"></div>
-            <div class="address-box" id="deposit-addr-display">Загрузка адреса...</div>
-            <button class="primary-btn" onclick="copyDepositAddress()">Скопировать адрес</button>
-        </div>
-    </div>
+  <div id="tab-menu" class="tab">
+    <div class="card"><div class="ct">Верификация <span class="bdg pending" id="k-st">Проверка…</span></div>
+      <div class="info" id="k-txt"></div>
+      <button class="pb" id="k-btn" onclick="startKyc()">Пройти верификацию</button></div>
+    <div class="card"><div class="ct">Защита кошелька <span class="bdg fail" id="bk-st">Копия не сделана</span></div>
+      <div class="rowx"><div class="rt"><b>Секретная фраза</b><span>12 слов — ключ к вашим деньгам. Если потеряете телефон, только она вернёт доступ. Запишите на бумагу и никому не показывайте.</span></div><button class="sb" onclick="showSeed()">Показать</button></div>
+      <div class="rowx"><div class="rt"><b>Файл-копия</b><span>Зашифрованный файл, который открывается вашим паролем. Сохраните его в облако или на флешку.</span></div><button class="sb" onclick="backup()">Скачать</button></div>
+      <div class="rowx"><div class="rt"><b>Восстановление</b><span>Перенесите кошелёк на новое устройство по фразе или файлу.</span></div><button class="sb" onclick="restore()">Открыть</button></div>
+      <input type="file" id="bf" accept=".json" style="display:none"></div>
+    <div class="card"><div class="ct">Состояние сети</div><div class="info" id="diag"></div></div>
+  </div>
+</div>
 
-    <div class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('home', this)"><svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><span>Главная</span></div>
-        <div class="nav-item" onclick="switchTab('history', this)"><svg class="svg-nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span>История</span></div>
-        <div class="nav-center-btn" onclick="openModal('deposit-modal')"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></div>
-        <div class="nav-item" onclick="switchTab('cards', this)"><svg class="svg-nav-icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg><span>Карта</span></div>
-        <div class="nav-item" onclick="switchTab('menu', this)"><svg class="svg-nav-icon" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg><span>Меню</span></div>
-    </div>
+<div id="send" class="mo" onclick="closeModals()"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh">Отправить<span onclick="closeModals()">✕</span></div>
+  <div class="ig"><span class="il">Актив и сеть</span><select id="s-asset"></select></div>
+  <div class="ig"><span class="il">Адрес получателя (в той же сети)</span><input id="s-addr" placeholder="0x…"></div>
+  <div class="ig"><span class="il">Сумма</span><input id="s-amt" type="number" inputmode="decimal" placeholder="0.00"></div>
+  <div class="info">Комиссия сети списывается с баланса нативной монеты (BNB / ETH / POL / TRX). Для перевода USDT в TRON на балансе должен быть TRX.</div>
+  <button class="pb" id="s-btn" onclick="doSend()">Подтвердить перевод</button>
+</div></div>
 
-    <script>
-        const tg = window.Telegram ? window.Telegram.WebApp : null;
-        if (tg) tg.expand();
+<div id="dep" class="mo" onclick="closeModals()"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh">Получить<span onclick="closeModals()">✕</span></div>
+  <div class="ig"><span class="il">Сеть</span><select id="d-net" onchange="updDep()"></select></div>
+  <div class="qr" id="qr"></div><div class="addr" id="d-addr"></div><div class="info" id="d-note"></div>
+  <button class="pb" onclick="copyAddr()">Скопировать адрес</button>
+</div></div>
 
-        function triggerHaptic() {
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-        }
+<div id="buy" class="mo" onclick="closeModals()"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh">Купить через СБП<span onclick="closeModals()">✕</span></div>
+  <div class="ig"><span class="il">Что купить</span><select id="b-asset"></select></div>
+  <div class="ig"><span class="il">Сумма в рублях</span><input id="b-rub" type="number" inputmode="decimal" placeholder="1000"></div>
+  <div class="qr" id="b-qr"></div><div class="info" id="b-info"></div>
+  <button class="pb" onclick="buy()">Создать QR для оплаты</button>
+</div></div>
 
-        let userAccount = { mnemonic: '', walletEVM: null, bnbBalance: 0.0, addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } };
-        let currentDisplayUsd = 0.0;
-        let isAutoBridgeActive = false;
+<div id="seed" class="mo" onclick="closeModals()"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh">Секретная фраза<span onclick="closeModals()">✕</span></div>
+  <div class="info">Запишите слова по порядку. Любой, кто их увидит, получит доступ к вашим деньгам.</div>
+  <div class="sg" id="seed-grid"></div><button class="pb" onclick="copySeed()">Скопировать</button>
+</div></div>
 
-        const top20Assets = [
-            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['BEP-20', 'TRC-20', 'ERC-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 15.0 },
-            { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (Native SegWit)'], price: 65000.0, balance: 0.0 },
-            { id: 'ETH', name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Polygon'], price: 3500.0, balance: 0.0 },
-            { id: 'TON', name: 'Toncoin', icon: 'https://cryptologos.cc/logos/toncoin-ton-logo.png', networks: ['TON Network'], price: 6.80, balance: 0.0 },
-            { id: 'BNB', name: 'BNB', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', networks: ['BEP-20 (BSC)'], price: 580.0, balance: 0.05 }
-        ];
+<div class="nav">
+  <div class="ni active" onclick="tab('home',this)"><span data-i="home"></span>Главная</div>
+  <div class="ni" onclick="tab('history',this)"><span data-i="hist"></span>История</div>
+  <div class="nc" onclick="openModal('buy')" data-i="buy"></div>
+  <div class="ni" onclick="tab('swap',this)"><span data-i="swap"></span>Обмен</div>
+  <div class="ni" onclick="tab('menu',this)"><span data-i="menu"></span>Меню</div>
+</div>
 
-        window.onload = function() {
-            initAccount();
-            renderAssetsList();
-            initSelects();
-            fetchPricesFromBybit();
-            fetchOnChainBalances();
-        };
+<script>
+// ===== НАСТРОЙКИ ИНТЕГРАЦИЙ =====
+const CFG={
+  PAY_API:'',   // бэкенд платёжного шлюза СБП. POST /sbp/invoice {uid,rub,asset,network,address} -> {id,qr,amountCrypto}; GET /sbp/invoice/:id -> {status:'pending|paid|failed|expired'}
+  KYC_API:'',   // провайдер верификации. GET /status?uid= -> {status:'approved|pending|none',url}
+  ES_KEY:'',    // необязательно: ключ Etherscan V2 (полная история BNB Chain). Без него история берётся из открытых источников
+  LIFI_KEY:'',  // ключ LI.FI (portal.li.fi) — повышает лимиты обмена
+  RPC:{}        // свои RPC-узлы, используются первыми. Пример: {BSC:'https://bsc-mainnet.nodereal.io/v1/KEY'}
+};
+const tg=window.Telegram&&Telegram.WebApp;if(tg)tg.expand();
+const hap=()=>{try{tg.HapticFeedback.impactOccurred('light')}catch(e){}};
+const $=i=>document.getElementById(i);
+const fmt=n=>Number(n).toLocaleString('ru-RU',{maximumFractionDigits:6});
+const I={send:'<path d="M7 17L17 7M8 7h9v9"/>',recv:'<path d="M17 7L7 17M16 17H7V8"/>',swap:'<path d="M7 4v13M7 17l-3-3M7 17l3-3M17 20V7M17 7l-3 3M17 7l3 3"/>',buy:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',hist:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',menu:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>'};
+document.querySelectorAll('[data-i]').forEach(e=>e.innerHTML=`<svg viewBox="0 0 24 24">${I[e.dataset.i]}</svg>`);
 
-        function initAccount() {
-            let savedMnemonic = localStorage.getItem('aether_master_mnemonic');
-            if (!savedMnemonic) {
-                const wallet = ethers.Wallet.createRandom();
-                savedMnemonic = wallet.mnemonic.phrase;
-                localStorage.setItem('aether_master_mnemonic', savedMnemonic);
-            }
-            userAccount.mnemonic = savedMnemonic;
-            userAccount.walletEVM = ethers.Wallet.fromMnemonic(savedMnemonic);
+const NETS={
+  BSC:{name:'BNB Smart Chain',id:56,nat:'BNB',rpc:['https://bsc-dataseed.binance.org','https://bsc-rpc.publicnode.com','https://1rpc.io/bnb','https://bsc.drpc.org']},
+  ETH:{name:'Ethereum',id:1,nat:'ETH',rpc:['https://ethereum-rpc.publicnode.com','https://eth.llamarpc.com','https://1rpc.io/eth','https://eth.drpc.org']},
+  POL:{name:'Polygon',id:137,nat:'POL',rpc:['https://polygon-bor-rpc.publicnode.com','https://polygon-rpc.com','https://1rpc.io/matic']},
+  ARB:{name:'Arbitrum One',id:42161,nat:'ETH',rpc:['https://arb1.arbitrum.io/rpc','https://arbitrum-one-rpc.publicnode.com','https://1rpc.io/arb']},
+  TRX:{name:'TRON (TRC-20)',nat:'TRX'}
+};
+const TOK={
+  BSC:[['USDT','0x55d398326f99059fF775485246999027B3197955',18],['USDC','0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',18]],
+  ETH:[['USDT','0xdAC17F958D2ee523a2206206994597C13D831ec7',6],['USDC','0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',6]],
+  POL:[['USDT','0xc2132D05D31c914a87C6611C10748AEb04B58e8F',6],['USDC','0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',6]],
+  ARB:[['USDT','0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',6],['USDC','0xaf88d065e77c8cC2239327C5EDb3A432268e5831',6]],
+  TRX:[['USDT','TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',6]]
+};
+const ICO={BNB:'bnb',ETH:'eth',POL:'matic',TRX:'trx',USDT:'usdt',USDC:'usdc'},ZERO='0x0000000000000000000000000000000000000000';
+const ERC=['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
+const H=[],P={USDT:1,USDC:1},PR={};
+for(const n in NETS){H.push({net:n,sym:NETS[n].nat,tok:null,dec:n==='TRX'?6:18,bal:null});TOK[n].forEach(([s,a,d])=>H.push({net:n,sym:s,tok:a,dec:d,bal:null}))}
+const prov=n=>PR[n]||(PR[n]=new ethers.providers.StaticJsonRpcProvider(CFG.RPC[n]||NETS[n].rpc[0],NETS[n].id));
+const S={hist:[],hLoaded:false};
+const coin=h=>`<div class="co"><i>${h.sym[0]}</i><img src="https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ICO[h.sym]}.svg" onerror="this.remove()"><span class="nb ${h.net}">${h.net[0]}</span></div>`;
 
-            userAccount.addresses.EVM = userAccount.walletEVM.address;
-            userAccount.addresses.TRON = "T" + ethers.utils.sha256(userAccount.walletEVM.address).substring(2, 35);
-            userAccount.addresses.TON = "EQB" + ethers.utils.keccak256(userAccount.walletEVM.address).substring(2, 40);
-            userAccount.addresses.SOL = "Sol" + evmAddrClean(userAccount.walletEVM.address).substring(0, 40);
-            userAccount.addresses.BTC = "bc1q" + evmAddrClean(userAccount.walletEVM.address).substring(0, 38);
+const tmo=(p,ms=8000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('таймаут')),ms))]);
+async function rpc(n,m,p){
+  let err;
+  for(const u of [CFG.RPC[n],...NETS[n].rpc].filter(Boolean)){
+    try{const j=await tmo(fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:m,params:p})}).then(r=>r.json()));if(j.error)throw new Error(j.error.message);return j.result}
+    catch(e){err=e}
+  }
+  throw err;
+}
+const TH=['https://api.trongrid.io','https://api.tronstack.io'];
+async function tron(path,body){let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(r=>r.json()))}catch(e){err=e}}throw err}
+function tronOk(a){try{const d=ethers.utils.base58.decode(a);return d.length===25&&d[0]===0x41&&ethers.utils.hexlify(d.slice(21))===ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(d.slice(0,21))),0,4)}catch(e){return false}}
 
-            document.getElementById('addr-evm-display').innerText = userAccount.addresses.EVM;
-            document.getElementById('addr-tron-display').innerText = userAccount.addresses.TRON;
-            document.getElementById('addr-ton-display').innerText = userAccount.addresses.TON;
-            document.getElementById('addr-sol-display').innerText = userAccount.addresses.SOL;
-            document.getElementById('addr-btc-display').innerText = userAccount.addresses.BTC;
-        }
+// ===== АККАУНТ: уникальный кошелёк и хранилище на каждого пользователя =====
+function initAccount(){
+  const u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user;
+  S.uid=u?String(u.id):'local';S.mk='aether_m_'+S.uid;S.tk='aether_tx_'+S.uid;
+  let m=localStorage.getItem(S.mk)||localStorage.getItem('aether_master_mnemonic'); // миграция старого кошелька
+  if(!m||!ethers.utils.isValidMnemonic(m))m=ethers.Wallet.createRandom().mnemonic.phrase;
+  localStorage.setItem(S.mk,m);
+  S.loc=JSON.parse(localStorage.getItem(S.tk)||'[]');
+  S.m=m;S.w=ethers.Wallet.fromMnemonic(m);S.evm=S.w.address;
+  const k=ethers.utils.HDNode.fromMnemonic(m).derivePath("m/44'/195'/0'/0/0").privateKey;
+  S.trk=k;const raw=ethers.utils.concat(['0x41',ethers.utils.computeAddress(k)]);
+  const chk=ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(raw)),0,4);
+  S.tron=ethers.utils.base58.encode(ethers.utils.concat([raw,chk]));
+  S.tronHex=ethers.utils.hexlify(raw).slice(2);
+  
+  $('chip').textContent=S.evm.slice(0,6)+'…'+S.evm.slice(-4);
+  if(u){$('uname').textContent=u.username?'@'+u.username:u.first_name;$('ini').textContent=(u.first_name||'A').slice(0,2).toUpperCase()}
+}
+const saveLoc=()=>localStorage.setItem(S.tk,JSON.stringify(S.loc.slice(-100)));
 
-        function evmAddrClean(addr) { return addr.replace('0x', '').toLowerCase(); }
+function render(){
+  let tot=0;const rows=H.map((h,i)=>({h,i,usd:(h.bal||0)*(P[h.sym]||0)}));
+  rows.forEach(r=>tot+=r.usd);rows.sort((a,b)=>b.usd-a.usd||(b.h.bal||0)-(a.h.bal||0));
+  $('assets').innerHTML=rows.map(({h,i,usd})=>`<div class="ai ${h.bal?'':'z'}" onclick="openSend(${i})">${coin(h)}<div class="m"><div class="t">${h.sym}</div><div class="s">${NETS[h.net].name}</div></div><div class="v"><div class="a">${h.err?'нет связи':h.bal===null?'…':fmt(h.bal)}</div><div class="s">$${usd.toFixed(2)}</div></div></div>`).join('');
+  $('usd').textContent='$'+tot.toFixed(2);
+  $('diag').innerHTML=Object.keys(NETS).map(n=>{const e=H.find(h=>h.net===n&&h.err);return `${NETS[n].name}: ${e?'<span style="color:var(--er)">'+e.err+'</span>':'<span style="color:var(--ok)">ок</span>'}`}).join('<br>');
+}
 
-        // АВТОМАТИЧЕСКАЯ МГНОВЕННАЯ МАРШРУТИЗАЦИЯ МОСТА (БЕЗ УВЕДОМЛЕНИЙ КЛИЕНТА)
-        function onRecipientAddressInput(addr) {
-            addr = addr.trim();
-            const netSelect = document.getElementById('send-network-select');
-            const routeLabel = document.getElementById('route-type-label');
-            const warningBox = document.getElementById('gas-warning-box');
-            
-            let detectedTargetType = 'EVM';
-            if (addr.startsWith('T') && addr.length >= 33) detectedTargetType = 'TRON';
-            else if (addr.startsWith('EQ') || addr.startsWith('UQ')) detectedTargetType = 'TON';
-            else if (addr.startsWith('bc1') || addr.startsWith('1')) detectedTargetType = 'BTC';
+async function syncEvm(h){
+  try{
+    const v=h.tok?await rpc(h.net,'eth_call',[{to:h.tok,data:'0x70a08231'+ethers.utils.hexZeroPad(S.evm,32).slice(2)},'latest']):await rpc(h.net,'eth_getBalance',[S.evm,'latest']);
+    h.bal=+ethers.utils.formatUnits(ethers.BigNumber.from(v),h.dec);h.err=0;
+    if(h.net==='BSC'&&!h.tok&&!CFG.ES_KEY){const k='aether_lb_'+S.uid,lb=JSON.parse(localStorage.getItem(k)||'null');
+      if(lb!==null&&h.bal>lb+1e-7){S.loc.push({hash:'detected-'+Date.now(),t:Date.now(),net:'BSC',sym:'BNB',amt:h.bal-lb,dir:'in',st:'ok'});saveLoc()}
+      localStorage.setItem(k,JSON.stringify(h.bal))}
+  }catch(e){h.err=String(e.message||e).slice(0,60)}render();
+}
+async function syncTron(){
+  const hs=H.filter(h=>h.net==='TRX');
+  try{
+    const r=await tron('/v1/accounts/'+S.tron);const a=r.data&&r.data[0];
+    hs.forEach(h=>{h.err=0;if(!a){h.bal=0;return}h.bal=h.tok?Number((a.trc20||[]).reduce((s,o)=>o[h.tok]?o[h.tok]:s,0))/10**h.dec:(a.balance||0)/1e6});
+  }catch(e){hs.forEach(h=>h.err=String(e.message||e).slice(0,60))}render();
+}
+async function syncPrices(){
+  try{const r=await(await fetch('https://api.bybit.com/v5/market/tickers?category=spot')).json();
+    ['BNB','ETH','POL','TRX'].forEach(s=>{const t=r.result.list.find(x=>x.symbol===s+'USDT');if(t)P[s]=+t.lastPrice})}
+  catch(e){try{const r=await(await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin,ethereum,matic-network,tron&vs_currencies=usd')).json();
+    P.BNB=r.binancecoin.usd;P.ETH=r.ethereum.usd;P.POL=r['matic-network'].usd;P.TRX=r.tron.usd}catch(e2){}}
+  render();
+}
 
-            const sourceNetwork = netSelect.value;
-            isAutoBridgeActive = false;
+// ===== ИСТОРИЯ =====
+async function chk(x){
+  try{
+    if(x.kind==='swap'){const j=await(await fetch(`https://li.quest/v1/status?txHash=${x.hash}&fromChain=${NETS[x.net].id}`)).json();if(j.status==='DONE')x.st='ok';else if(j.status==='FAILED')x.st='fail'}
+    else if(x.net==='TRX'){const j=await tron('/wallet/gettransactioninfobyid',{value:x.hash});if(j.blockNumber)x.st=(j.receipt&&j.receipt.result&&j.receipt.result!=='SUCCESS')?'fail':'ok'}
+    else{const r=await prov(x.net).getTransactionReceipt(x.hash);if(r)x.st=r.status?'ok':'fail'}
+    saveLoc();
+  }catch(e){}
+}
+async function loadHist(){
+  const me=S.evm.toLowerCase(),L=[],jobs=S.loc.filter(x=>x.st==='pending').map(chk);
+  if(CFG.ES_KEY)['BSC','ETH','POL','ARB'].forEach(n=>{
+    const known=TOK[n].map(t=>t[1].toLowerCase());
+    const q=a=>fetch(`https://api.etherscan.io/v2/api?chainid=${NETS[n].id}&module=account&action=${a}&address=${S.evm}&page=1&offset=50&sort=desc&apikey=${CFG.ES_KEY}`).then(r=>r.json()).then(r=>Array.isArray(r.result)?r.result:[]).catch(()=>[]);
+    jobs.push(q('txlist').then(a=>a.forEach(x=>{if(x.value==='0')return;L.push({hash:x.hash,t:x.timeStamp*1e3,net:n,sym:NETS[n].nat,amt:+ethers.utils.formatEther(x.value),dir:x.to.toLowerCase()===me?'in':'out',st:x.isError==='1'?'fail':'ok'})})));
+    jobs.push(q('tokentx').then(a=>a.forEach(x=>{if(!known.includes(x.contractAddress.toLowerCase()))return;L.push({hash:x.hash,t:x.timeStamp*1e3,net:n,sym:x.tokenSymbol,amt:+ethers.utils.formatUnits(x.value,+x.tokenDecimal),dir:x.to.toLowerCase()===me?'in':'out',st:'ok'})})));
+  });
+  const BS={ETH:'https://eth.blockscout.com',POL:'https://polygon.blockscout.com',ARB:'https://arbitrum.blockscout.com'};
+  if(!CFG.ES_KEY){
+    Object.keys(BS).forEach(n=>{
+      const g=p=>tmo(fetch(BS[n]+'/api/v2/addresses/'+S.evm+p).then(r=>r.json()),10000).then(r=>r.items||[]).catch(()=>[]),known=TOK[n].map(t=>t[1].toLowerCase());
+      jobs.push(g('/transactions').then(a=>a.forEach(x=>{if(!+x.value)return;L.push({hash:x.hash,t:Date.parse(x.timestamp),net:n,sym:NETS[n].nat,amt:+ethers.utils.formatEther(x.value),dir:(x.to&&x.to.hash.toLowerCase())===me?'in':'out',st:x.status==='error'?'fail':'ok'})})));
+      jobs.push(g('/token-transfers?type=ERC-20').then(a=>a.forEach(x=>{const tk=x.token||{};if(!known.includes((tk.address_hash||tk.address||'').toLowerCase()))return;L.push({hash:x.transaction_hash||x.tx_hash,t:Date.parse(x.timestamp),net:n,sym:tk.symbol,amt:+ethers.utils.formatUnits(x.total.value,x.total.decimals||tk.decimals),dir:x.to.hash.toLowerCase()===me?'in':'out',st:'ok'})})));
+    });
+    jobs.push((async()=>{try{
+      const t0=ethers.utils.id('Transfer(address,address,uint256)'),m32=ethers.utils.hexZeroPad(S.evm,32),addrs=TOK.BSC.map(t=>t[1]);
+      const fb='0x'+(parseInt(await rpc('BSC','eth_blockNumber',[]),16)-100000).toString(16);
+      const [i,o]=await Promise.all([rpc('BSC','eth_getLogs',[{fromBlock:fb,toBlock:'latest',address:addrs,topics:[t0,null,m32]}]),rpc('BSC','eth_getLogs',[{fromBlock:fb,toBlock:'latest',address:addrs,topics:[t0,m32]}])]);
+      const lg=[...i.map(l=>[l,'in']),...o.map(l=>[l,'out'])].sort((a,b)=>parseInt(b[0].blockNumber,16)-parseInt(a[0].blockNumber,16)).slice(0,25);
+      for(const [l,d] of lg){const b=await rpc('BSC','eth_getBlockByNumber',[l.blockNumber,false]),tk=TOK.BSC.find(t=>t[1].toLowerCase()===l.address.toLowerCase());
+        L.push({hash:l.transactionHash,t:parseInt(b.timestamp,16)*1e3,net:'BSC',sym:tk[0],amt:+ethers.utils.formatUnits(l.data,tk[2]),dir:d,st:'ok'})}
+    }catch(e){}})());
+  }
+  jobs.push(tron('/v1/accounts/'+S.tron+'/transactions/trc20?limit=50&contract_address='+TOK.TRX[0][1]).then(r=>(r.data||[]).forEach(x=>L.push({hash:x.transaction_id,t:x.block_timestamp,net:'TRX',sym:x.token_info.symbol,amt:x.value/10**x.token_info.decimals,dir:x.to===S.tron?'in':'out',st:'ok'}))).catch(()=>{}));
+  jobs.push(tron('/v1/accounts/'+S.tron+'/transactions?limit=50').then(r=>(r.data||[]).forEach(x=>{const c=x.raw_data.contract[0];if(c.type!=='TransferContract')return;const v=c.parameter.value;L.push({hash:x.txID,t:x.block_timestamp,net:'TRX',sym:'TRX',amt:v.amount/1e6,dir:v.owner_address===S.tronHex?'out':'in',st:(x.ret&&x.ret[0].contractRet)==='SUCCESS'?'ok':'fail'})})).catch(()=>{}));
+  await Promise.all(jobs);
+  const seen=new Set(L.filter(x=>x.dir==='in'||!S.loc.some(l=>l.hash===x.hash)).map(x=>x.hash.toLowerCase()+x.sym+x.dir));
+  const rem=L.filter(x=>!S.loc.some(l=>l.hash.toLowerCase()===x.hash.toLowerCase()&&x.dir==='out'));
+  S.hist=[...rem,...S.loc].sort((a,b)=>b.t-a.t);S.hLoaded=true;renderHist();
+}
+function renderHist(){
+  const el=$('hist');
+  if(!S.hist.length){el.innerHTML=`<div class="empty">${S.hLoaded?'Операций пока нет':'Загрузка…'}</div>`;return}
+  const L={ok:'Одобрена',pending:'В обработке',fail:'Отклонена'};
+  el.innerHTML=S.hist.map(x=>`<div class="hi"><div class="hic ${x.dir}"><svg viewBox="0 0 24 24">${x.kind==='swap'?I.swap:x.dir==='in'?I.recv:I.send}</svg></div><div class="m"><div class="t">${x.note||(x.dir==='in'?'Пополнение':'Трата')} · ${NETS[x.net].name}</div><div class="s">${new Date(x.t).toLocaleString('ru-RU')} · ${x.hash.startsWith('detected')?'обнаружено в сети':x.hash.slice(0,8)+'…'+x.hash.slice(-6)}</div></div><div class="v"><div class="a ${x.dir}">${x.dir==='in'?'+':'−'}${fmt(x.amt)} ${x.sym}</div><span class="bdg ${x.st}">${L[x.st]}</span></div></div>`).join('');
+}
 
-            if (sourceNetwork.includes('TRC-20') && detectedTargetType === 'EVM') {
-                isAutoBridgeActive = true;
-                routeLabel.innerText = '⚡ Автоматический Кроссчейн-мост (TRC20 ➔ BEP20)';
-                warningBox.innerText = '⚡ Маршрут: Средства будут автоматически конвертированы и доставлены на EVM-адрес через проверенный шлюз ликвидности.';
-                warningBox.style.display = 'block';
-            } else if ((sourceNetwork.includes('BEP-20') || sourceNetwork.includes('ERC-20')) && detectedTargetType === 'TRON') {
-                isAutoBridgeActive = true;
-                routeLabel.innerText = '⚡ Автоматический Кроссчейн-мост (BEP20 ➔ TRC20)';
-                warningBox.innerText = '⚡ Маршрут: Авто-конвертация из EVM в TRON через шлюз быстрых обменов.';
-                warningBox.style.display = 'block';
-            } else {
-                routeLabel.innerText = 'Прямой перевод в сети';
-                warningBox.style.display = 'none';
-            }
-        }
+async function syncAll(){
+  $('upd').textContent='Синхронизация…';
+  await Promise.all([...H.filter(h=>h.net!=='TRX').map(syncEvm),syncTron(),syncPrices(),loadHist()]);
+  $('upd').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
+}
 
-        async function fetchOnChainBalances() {
-            try {
-                const bscProvider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-                const rawBnb = await bscProvider.getBalance(userAccount.addresses.EVM);
-                userAccount.bnbBalance = parseFloat(ethers.utils.formatEther(rawBnb));
-            } catch (e) {}
-            renderAssetsList();
-            recalcTotalBalance();
-        }
+// ===== ОТПРАВКА =====
+function openSend(i){
+  hap();$('s-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}${h.bal!==null?' — '+fmt(h.bal):''}</option>`).join('');
+  if(typeof i==='number')$('s-asset').value=i;
+  openModal('send');
+}
+function rec(tx,h,amt,extra){const r={hash:tx.hash,t:Date.now(),net:h.net,sym:h.sym,amt:+amt,dir:'out',st:'pending',...extra};S.loc.push(r);saveLoc();loadHist();
+  tx.wait().then(x=>{if(!extra||!extra.kind)r.st=x.status?'ok':'fail'}).catch(()=>{r.st='fail'}).finally(()=>{saveLoc();loadHist();syncAll()});}
+async function doSend(){
+  const h=H[+$('s-asset').value],to=$('s-addr').value.trim(),a=$('s-amt').value;
+  if(H[+$('s-asset').value].net==='TRX'?!tronOk(to):!ethers.utils.isAddress(to))return alert('Неверный адрес получателя для выбранной сети');
+  if(!(+a>0))return alert('Введите сумму');
+  if(h.bal!==null&&+a>h.bal)return alert('Недостаточно средств');
+  const b=$('s-btn');b.disabled=true;b.textContent='Отправка в сеть…';
+  try{if(h.net==='TRX'){await sendTron(h,to,a);closeModals();b.disabled=false;b.textContent='Подтвердить перевод';return}const w=S.w.connect(prov(h.net)),v=ethers.utils.parseUnits(a,h.dec);
+    const tx=h.tok?await new ethers.Contract(h.tok,ERC,w).transfer(to,v):await w.sendTransaction({to,value:v});
+    rec(tx,h,a);closeModals();
+  }catch(e){alert('Ошибка перевода: '+(e.reason||e.message))}
+  b.disabled=false;b.textContent='Подтвердить перевод';
+}
 
-        async function fetchPricesFromBybit() {
-            try {
-                const res = await fetch('https://api.bybit.com/v5/market/tickers?category=spot');
-                const data = await res.json();
-                if(data.result && data.result.list) {
-                    const tickers = data.result.list;
-                    top20Assets.forEach(asset => {
-                        if(asset.id === 'USDT') return;
-                        const match = tickers.find(t => t.symbol === asset.id + 'USDT');
-                        if(match && match.lastPrice) asset.price = parseFloat(match.lastPrice);
-                    });
-                    renderAssetsList();
-                    recalcTotalBalance();
-                }
-            } catch(e) {}
-        }
+async function sendTron(h,to,a){
+  const v=ethers.utils.parseUnits(a,h.dec).toString();let tx;
+  if(h.tok){
+    const par=ethers.utils.hexZeroPad(ethers.utils.hexlify(ethers.utils.base58.decode(to).slice(1,21)),32).slice(2)+ethers.utils.hexZeroPad(ethers.BigNumber.from(v).toHexString(),32).slice(2);
+    const r=await tron('/wallet/triggersmartcontract',{owner_address:S.tron,contract_address:h.tok,function_selector:'transfer(address,uint256)',parameter:par,fee_limit:100000000,call_value:0,visible:true});
+    if(!r.result||!r.result.result)throw new Error('Не удалось создать транзакцию');tx=r.transaction;
+  }else{tx=await tron('/wallet/createtransaction',{owner_address:S.tron,to_address:to,amount:+v,visible:true});if(!tx.txID)throw new Error('Не удалось создать транзакцию')}
+  const sg=new ethers.utils.SigningKey(S.trk).signDigest('0x'+tx.txID);
+  tx.signature=[sg.r.slice(2)+sg.s.slice(2)+(sg.recoveryParam?'01':'00')];
+  const r=await tron('/wallet/broadcasttransaction',tx);
+  if(!r.result)throw new Error(r.code||'Сеть отклонила транзакцию (проверьте, что на балансе есть TRX для комиссии)');
+  S.loc.push({hash:tx.txID,t:Date.now(),net:'TRX',sym:h.sym,amt:+a,dir:'out',st:'pending'});saveLoc();loadHist();setTimeout(syncAll,6000);
+}
 
-        function renderAssetsList() {
-            const container = document.getElementById('asset-list-container');
-            container.innerHTML = '';
-            top20Assets.forEach(asset => {
-                const fiatVal = (asset.balance * asset.price).toFixed(2);
-                const div = document.createElement('div');
-                div.className = 'asset-item';
-                div.onclick = () => { triggerHaptic(); openSendModalWithAsset(asset.id); };
-                div.innerHTML = `
-                    <div class="asset-info">
-                        <img src="${asset.icon}" class="asset-icon-img" alt="${asset.id}" onerror="this.src='https://cryptologos.cc/logos/tether-usdt-logo.png'">
-                        <div><div class="asset-name">${asset.name}</div><div class="asset-symbol">$${asset.price.toLocaleString()}</div></div>
-                    </div>
-                    <div class="asset-val"><div class="asset-amount">${asset.balance.toFixed(4)} ${asset.id}</div><div class="asset-fiat">$${fiatVal}</div></div>
-                `;
-                container.appendChild(div);
-            });
-        }
+// ===== ОБМЕН И МОСТЫ (LI.FI) =====
+function fillTo(){const n=$('w-tn').value;$('w-tt').innerHTML=H.filter(h=>h.net===n).map(h=>`<option>${h.sym}</option>`).join('')}
+const lh=()=>CFG.LIFI_KEY?{'x-lifi-api-key':CFG.LIFI_KEY}:{};
+async function swapQuote(silent){
+  const f=H[+$('w-from').value],tn=$('w-tn').value,tt=H.find(h=>h.net===tn&&h.sym===$('w-tt').value),amt=$('w-amt').value,inf=$('w-info');
+  if(!(+amt>0))return inf.textContent='Введите сумму';
+  if(f.bal!==null&&+amt>f.bal)return inf.textContent='Недостаточно средств';
+  if(!silent){inf.textContent='Ищем лучший маршрут…';$('w-go').disabled=true}
+  try{
+    const q=new URLSearchParams({fromChain:NETS[f.net].id,toChain:NETS[tn].id,fromToken:f.tok||ZERO,toToken:tt.tok||ZERO,fromAmount:ethers.utils.parseUnits(amt,f.dec).toString(),fromAddress:S.evm,toAddress:S.evm,slippage:0.005});
+    const j=await(await fetch('https://li.quest/v1/quote?'+q,{headers:lh()})).json();
+    if(!j.estimate)throw new Error(j.message||'Маршрут не найден');
+    S.q={j,f,tt,tn,amt};const e=j.estimate;
+    inf.innerHTML=`Получите не менее <b style="color:var(--tx)">${fmt(ethers.utils.formatUnits(e.toAmountMin,tt.dec))} ${tt.sym}</b><br>Маршрут: ${j.toolDetails?j.toolDetails.name:j.tool} · ≈ ${Math.max(1,Math.round((e.executionDuration||60)/60))} мин${f.net!==tn?' (кроссчейн)':''}`;
+    $('w-go').disabled=false;
+  }catch(e){inf.textContent='Ошибка: '+e.message}
+}
+async function swapExec(){
+  const b=$('w-go');b.disabled=true;
+  try{
+    let {j,f,tt,tn,amt}=S.q;const w=S.w.connect(prov(f.net));
+    if(f.tok){const c=new ethers.Contract(f.tok,ERC,w),need=ethers.BigNumber.from(j.action.fromAmount);
+      if((await c.allowance(S.evm,j.estimate.approvalAddress)).lt(need)){b.textContent='Разрешение токена…';await(await c.approve(j.estimate.approvalAddress,need)).wait();await swapQuote(true);j=S.q.j}}
+    b.textContent='Отправка…';const r=j.transactionRequest;
+    const tx=await w.sendTransaction({to:r.to,data:r.data,value:r.value,gasLimit:r.gasLimit});
+    rec(tx,f,amt,{kind:'swap',note:`Обмен → ${tt.sym}`});alert('Обмен отправлен. Статус смотрите во вкладке «История».');
+  }catch(e){alert('Ошибка обмена: '+(e.reason||e.message))}
+  b.textContent='Подтвердить обмен';b.disabled=true;
+}
 
-        function recalcTotalBalance() {
-            let targetTotalUsd = 0;
-            top20Assets.forEach(a => targetTotalUsd += (a.balance * a.price));
-            animateBalanceCountUp(currentDisplayUsd, targetTotalUsd, 1500);
-        }
+// ===== ПОКУПКА ЧЕРЕЗ СБП (шлюз + KYC подключаются по API) =====
+async function kyc(){
+  if(!CFG.KYC_API)return true;
+  try{const j=await(await fetch(CFG.KYC_API+'/status?uid='+S.uid)).json();
+    if(j.status==='approved')return true;
+    if(j.url){tg&&tg.openLink?tg.openLink(j.url):open(j.url)}
+    alert('Требуется верификация. Пройдите её и повторите покупку.');return false;
+  }catch(e){alert('Сервис верификации недоступен');return false}
+}
+async function buy(){
+  const inf=$('b-info'),rub=+$('b-rub').value;
+  if(!CFG.PAY_API)return inf.textContent='Платёжный шлюз СБП ещё не подключён (CFG.PAY_API).';
+  if(!(rub>0))return inf.textContent='Введите сумму';
+  if(!await kyc())return;
+  const h=H[+$('b-asset').value];
+  try{
+    const inv=await(await fetch(CFG.PAY_API+'/sbp/invoice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:S.uid,rub,asset:h.sym,network:h.net,address:h.net==='TRX'?S.tron:S.evm})})).json();
+    if(!inv.qr)throw new Error(inv.error||'Шлюз не вернул QR');
+    $('b-qr').innerHTML='';new QRCode($('b-qr'),{text:inv.qr,width:190,height:190});
+    inf.textContent=`Оплатите по QR в приложении банка. К зачислению ≈ ${inv.amountCrypto} ${h.sym}`;
+    const t=setInterval(async()=>{try{const s=await(await fetch(CFG.PAY_API+'/sbp/invoice/'+inv.id)).json();
+      if(['paid','failed','expired'].includes(s.status)){clearInterval(t);inf.textContent=s.status==='paid'?'Оплачено. Средства зачисляются…':'Платёж '+(s.status==='failed'?'отклонён':'истёк');syncAll()}}catch(e){}},5000);
+  }catch(e){inf.textContent='Ошибка: '+e.message}
+}
 
-        function animateBalanceCountUp(startVal, endVal, duration) {
-            const startTime = performance.now();
-            function update(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 4); 
-                const currentVal = startVal + (endVal - startVal) * easeProgress;
-                document.getElementById('total-balance-usd').innerText = '$' + currentVal.toFixed(2);
-                document.getElementById('total-balance-rub').innerText = '≈ ' + (currentVal * 95.0).toFixed(2) + ' ₽';
-                if (progress < 1) requestAnimationFrame(update);
-                else currentDisplayUsd = endVal;
-            }
-            requestAnimationFrame(update);
-        }
+// ===== АДРЕС / БЭКАП =====
+function updDep(){
+  const n=$('d-net').value,ad=n==='TRX'?S.tron:S.evm;
+  $('d-addr').textContent=ad;$('qr').innerHTML='';new QRCode($('qr'),{text:ad,width:160,height:160,colorDark:'#5B3C8C',colorLight:'#FFFFFF'});
+  $('d-note').textContent='Принимаются: '+H.filter(h=>h.net===n).map(h=>h.sym).join(', ')+' только в сети '+NETS[n].name+'. Иначе средства будут потеряны.';
+}
+function copyAddr(){hap();navigator.clipboard.writeText($('d-addr').textContent);alert('Адрес скопирован')}
+const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function dkey(pw,salt,use){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,[use])}
+async function backup(){
+  const pw=prompt('Придумайте пароль для бэкапа (минимум 8 символов). Без него файл не открыть.');if(!pw||pw.length<8)return;
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await dkey(pw,salt,'encrypt'),new TextEncoder().encode(S.m));
+  const data=JSON.stringify({v:1,addr:S.evm,salt:b64(salt),iv:b64(iv),ct:b64(ct)});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download='aether-backup-'+S.evm.slice(2,8)+'.json';a.click();
+  try{await navigator.clipboard.writeText(data)}catch(e){}mark();alert('Бэкап сохранён и скопирован в буфер обмена. Храните файл и пароль отдельно.');
+}
+function showSeed(){$('seed-grid').innerHTML=S.m.split(' ').map((w,i)=>`<div><small>${i+1}</small>${w}</div>`).join('');openModal('seed');mark()}
+function copySeed(){navigator.clipboard.writeText(S.m);alert('Скопировано. Храните в надёжном месте.')}
+function mark(){localStorage.setItem('aether_bk_'+S.uid,'1');bkUi()}
+function bkUi(){const ok=localStorage.getItem('aether_bk_'+S.uid);$('bk-st').className='bdg '+(ok?'ok':'fail');$('bk-st').textContent=ok?'Копия сделана':'Копия не сделана'}
+async function kycUi(){
+  const st=$('k-st'),tx=$('k-txt'),b=$('k-btn');
+  if(!CFG.KYC_API){st.className='bdg pending';st.textContent='Не подключена';b.disabled=true;tx.textContent='Верификация понадобится для покупки криптовалюты через СБП. Сервис ещё не подключён.';return}
+  try{const j=await tmo(fetch(CFG.KYC_API+'/status?uid='+S.uid).then(r=>r.json()));
+    const m={approved:['ok','Подтверждена','Личность подтверждена. Покупка через СБП доступна.'],pending:['pending','На проверке','Документы проверяются, обычно это занимает несколько минут.']}[j.status]||['fail','Не пройдена','Подтвердите личность, чтобы покупать криптовалюту через СБП.'];
+    st.className='bdg '+m[0];st.textContent=m[1];tx.textContent=m[2];b.style.display=j.status==='approved'?'none':'';b.disabled=j.status==='pending';
+  }catch(e){st.className='bdg fail';st.textContent='Нет связи';tx.textContent='Не удалось получить статус верификации.'}
+}
+function startKyc(){kyc().then(kycUi)}
+function setSeed(m){if(!ethers.utils.isValidMnemonic(m))return alert('Неверная seed-фраза');localStorage.setItem(S.mk,m);localStorage.removeItem(S.tk);location.reload()}
+function restore(){
+  if(confirm('Восстановить из файла бэкапа? (Отмена — ввести seed-фразу)'))return $('bf').click();
+  const m=(prompt('Seed-фраза (12/24 слова). Текущий кошелёк будет заменён — сначала сохраните его!')||'').trim().toLowerCase();if(m)setSeed(m);
+}
+$('bf').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text()),pw=prompt('Пароль от бэкапа');
+  const m=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(d.iv)},await dkey(pw,ub(d.salt),'decrypt'),ub(d.ct)));setSeed(m)}catch(x){alert('Не удалось расшифровать: неверный пароль или файл')}};
 
-        function initSelects() {
-            const sendSelect = document.getElementById('send-asset-select');
-            const depSelect = document.getElementById('deposit-asset-select');
-            sendSelect.innerHTML = ''; depSelect.innerHTML = '';
-            top20Assets.forEach(asset => {
-                sendSelect.innerHTML += `<option value="${asset.id}">${asset.name} (${asset.id})</option>`;
-                depSelect.innerHTML += `<option value="${asset.id}">${asset.name} (${asset.id})</option>`;
-            });
-            onSendAssetChange(); onDepositAssetChange();
-        }
+function tab(id,el){hap();document.querySelectorAll('.tab,.ni').forEach(t=>t.classList.remove('active'));$('tab-'+id).classList.add('active');
+  const n=el||[...document.querySelectorAll('.ni')].find(x=>x.getAttribute('onclick').includes("'"+id+"'"));if(n)n.classList.add('active')}
+function openModal(id){hap();closeModals();$(id).classList.add('active');if(id==='dep')updDep()}
+function closeModals(){document.querySelectorAll('.mo').forEach(m=>m.classList.remove('active'))}
 
-        function onSendAssetChange() {
-            const selectedId = document.getElementById('send-asset-select').value;
-            const asset = top20Assets.find(a => a.id === selectedId);
-            const netSelect = document.getElementById('send-network-select');
-            netSelect.innerHTML = '';
-            if(asset) {
-                asset.networks.forEach(net => { netSelect.innerHTML += `<option value="${net}">${net}</option>`; });
-            }
-            onSendNetworkChange();
-        }
-
-        function onSendNetworkChange() {
-            const addrInput = document.getElementById('send-target-addr').value;
-            onRecipientAddressInput(addrInput);
-        }
-
-        function onDepositAssetChange() {
-            const selectedId = document.getElementById('deposit-asset-select').value;
-            const asset = top20Assets.find(a => a.id === selectedId);
-            const netSelect = document.getElementById('deposit-network-select');
-            netSelect.innerHTML = '';
-            if(asset) {
-                asset.networks.forEach(net => { netSelect.innerHTML += `<option value="${net}">${net}</option>`; });
-            }
-            updateDepositQR();
-        }
-
-        function updateDepositQR() {
-            const selectedAsset = document.getElementById('deposit-asset-select').value;
-            const selectedNet = document.getElementById('deposit-network-select').value || '';
-            let targetAddress = userAccount.addresses.EVM;
-
-            if (selectedAsset === 'BTC' || selectedNet.includes('Bitcoin')) targetAddress = userAccount.addresses.BTC;
-            else if (selectedNet.includes('TRC-20') || selectedNet.includes('TRON')) targetAddress = userAccount.addresses.TRON;
-            else if (selectedNet.includes('TON')) targetAddress = userAccount.addresses.TON;
-            else if (selectedNet.includes('Solana')) targetAddress = userAccount.addresses.SOL;
-
-            document.getElementById('deposit-addr-display').innerText = targetAddress;
-            const qrc = document.getElementById('qr-container');
-            qrc.innerHTML = '';
-            new QRCode(qrc, { text: targetAddress, width: 150, height: 150, colorDark: "#5B3C8C", colorLight: "#FFFFFF" });
-        }
-
-        function openSendModalWithAsset(assetId) {
-            document.getElementById('send-asset-select').value = assetId;
-            onSendAssetChange();
-            openModal('send-modal');
-        }
-
-        function openSendModal() { triggerHaptic(); openModal('send-modal'); }
-
-        // МГНОВЕННАЯ ИСПОЛНИТЕЛЬНАЯ ФУНКЦИЯ (АВТО-МОСТ)
-        async function executeAutoBridgeSend() {
-            triggerHaptic();
-            const assetId = document.getElementById('send-asset-select').value;
-            const network = document.getElementById('send-network-select').value;
-            const recipient = document.getElementById('send-target-addr').value.trim();
-            const amount = document.getElementById('send-target-amount').value;
-
-            if (!recipient || !amount) { alert('Заполните адрес и сумму!'); return; }
-
-            const asset = top20Assets.find(a => a.id === assetId);
-            if (parseFloat(amount) > asset.balance) { alert('Недостаточно средств на балансе!'); return; }
-
-            const btn = document.getElementById('confirm-send-btn');
-            btn.innerText = isAutoBridgeActive ? 'Исполнение авто-моста...' : 'Отправка в сеть...';
-            btn.disabled = true;
-
-            try {
-                // Имитация мгновенного обмена через проверенный API-мост (ChangeNOW / FixedFloat API)
-                await new Promise(r => setTimeout(r, 1500));
-                
-                if (isAutoBridgeActive) {
-                    alert(`✅ Перевод успешно выполнен!\nСумма: ${amount} ${assetId}\nПолучатель: ${recipient}\n\nСредства автоматически конвертированы и доставлены в сеть получателя через шлюз моста.`);
-                } else {
-                    alert(`✅ Прямой перевод успешно отправлен в сеть!\nХеш транзакции: 0x${Math.random().toString(16).substr(2, 32)}`);
-                }
-                
-                // Списание баланса
-                asset.balance -= parseFloat(amount);
-                closeModals();
-                fetchOnChainBalances();
-            } catch (err) {
-                alert('Ошибка перевода: ' + err.message);
-            } finally {
-                btn.innerText = 'Подтвердить перевод';
-                btn.disabled = false;
-            }
-        }
-
-        function copyDepositAddress() {
-            triggerHaptic();
-            navigator.clipboard.writeText(document.getElementById('deposit-addr-display').innerText);
-            alert('Адрес скопирован!');
-        }
-
-        function switchTab(tabId, navEl) {
-            triggerHaptic();
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            if(navEl) navEl.classList.add('active');
-        }
-
-        function openModal(id) { 
-            triggerHaptic();
-            document.getElementById(id).classList.add('active');
-            if(id === 'deposit-modal') updateDepositQR();
-        }
-
-        function closeModals() { 
-            triggerHaptic();
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); 
-        }
-
-        function calcExchange() {
-            const val = parseFloat(document.getElementById('ex-from').value) || 0;
-            document.getElementById('ex-to').value = (val / 95.0).toFixed(2);
-        }
-    </script>
+window.onload=()=>{
+  initAccount();
+  $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');
+  const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
+  $('w-from').innerHTML=ev;$('b-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
+  $('w-tn').innerHTML=Object.keys(NETS).filter(n=>n!=='TRX').map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');fillTo();
+  render();renderHist();syncAll();kycUi();bkUi();
+  setInterval(syncAll,20000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncAll()});
+};
+</script>
 </body>
 </html>
