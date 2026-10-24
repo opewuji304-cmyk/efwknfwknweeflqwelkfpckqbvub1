@@ -33,4 +33,4 @@ Telegram Mini Apps требуют верифицировать `Telegram.WebApp.
 
 ## Проверка
 
-`python3 -m unittest discover -s tests -v` — 6 тестов пройдены; `python3 -m compileall -q backend tests` и `git diff --check` также пройдены. Docker/Compose, тестовый RPC, PostgreSQL server, провайдерские ключи и hosting credentials в среде отсутствуют, поэтому контейнерный запуск, Postgres интеграцию, mainnet/testnet поток и production deployment проверить нельзя. Публичный сайт/ветка GitHub не обновлялись.
+`python3 -m unittest discover -s tests -v` — 7 тестов пройдены; `python3 -m compileall -q backend tests` и `git diff --check` также пройдены. Docker/Compose, тестовый RPC, PostgreSQL server, провайдерские ключи и hosting credentials в среде отсутствуют, поэтому контейнерный запуск, Postgres интеграцию, mainnet/testnet поток и production deployment проверить нельзя. Изменения опубликованы в ветке GitHub `main`; публичный сайт и backend deployment не развёрнуты.
