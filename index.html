@@ -13,7 +13,7 @@
             --bg-main: #0A0512;
             --bg-card: rgba(255, 255, 255, 0.035);
             --bg-card-hover: rgba(255, 255, 255, 0.06);
-            --bg-input: rgba(18, 12, 30, 0.75);
+            --bg-input: rgba(18, 12, 30, 0.85);
             
             --accent-primary: #5B3C8C;
             --accent-soft: #7C52C2;
@@ -295,6 +295,10 @@
             margin-top: 6px;
         }
 
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+
         .nav-bar {
             position: fixed;
             bottom: 0;
@@ -400,6 +404,21 @@
             color: var(--accent-light);
             font-family: monospace;
             text-align: center;
+        }
+
+        .fee-info {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4px;
+        }
+
+        .network-hint {
+            font-size: 10px;
+            color: var(--success);
+            margin-top: 2px;
+            display: none;
         }
     </style>
 </head>
@@ -557,7 +576,8 @@
 
             <div class="input-group">
                 <span class="input-label">Адрес получателя</span>
-                <input type="text" id="send-target-addr" class="amount-input" placeholder="Вставьте адрес...">
+                <input type="text" id="send-target-addr" class="amount-input" placeholder="Вставьте адрес..." oninput="onRecipientAddressInput(this.value)">
+                <div id="detected-network-hint" class="network-hint">Сеть определена автоматически</div>
             </div>
 
             <div class="input-group">
@@ -565,7 +585,12 @@
                 <input type="number" id="send-target-amount" class="amount-input" placeholder="0.00">
             </div>
 
-            <button class="primary-btn" onclick="executeSendTransaction()">Подтвердить перевод</button>
+            <div class="fee-info">
+                <span>Комиссия сети (Gas):</span>
+                <span id="estimated-fee">~0.00045 BNB (~$0.25)</span>
+            </div>
+
+            <button class="primary-btn" id="confirm-send-btn" onclick="executeSendTransaction()">Подтвердить перевод</button>
         </div>
     </div>
 
@@ -621,11 +646,12 @@
 
         let userAccount = { 
             mnemonic: '', 
+            walletEVM: null,
             addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } 
         };
 
         const top20Assets = [
-            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['TRC-20', 'ERC-20', 'BEP-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 0.0 },
+            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['BEP-20', 'TRC-20', 'ERC-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 0.0 },
             { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (Native SegWit)', 'Lightning Network'], price: 65000.0, balance: 0.0 },
             { id: 'ETH', name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism', 'Base', 'Polygon'], price: 3500.0, balance: 0.0 },
             { id: 'TON', name: 'Toncoin', icon: 'https://cryptologos.cc/logos/toncoin-ton-logo.png', networks: ['TON Network'], price: 6.80, balance: 0.0 },
@@ -652,9 +678,9 @@
             renderAssetsList();
             initSelects();
             fetchPricesFromBybit();
-            fetchOnChainBalances(); // Живой опрос балансов с блокчейна
+            fetchOnChainBalances();
             setInterval(fetchPricesFromBybit, 15000);
-            setInterval(fetchOnChainBalances, 15000); // Опрос балансов каждые 15 сек
+            setInterval(fetchOnChainBalances, 15000);
         };
 
         function initAccount() {
@@ -666,13 +692,13 @@
             }
 
             userAccount.mnemonic = savedMnemonic;
-            const evmWallet = ethers.Wallet.fromMnemonic(savedMnemonic);
+            userAccount.walletEVM = ethers.Wallet.fromMnemonic(savedMnemonic);
 
-            userAccount.addresses.EVM = evmWallet.address;
-            userAccount.addresses.TRON = "T" + ethers.utils.sha256(evmWallet.address).substring(2, 35);
-            userAccount.addresses.TON = "EQB" + ethers.utils.keccak256(evmWallet.address).substring(2, 40);
-            userAccount.addresses.SOL = "Sol" + evmAddrClean(evmWallet.address).substring(0, 40);
-            userAccount.addresses.BTC = "bc1q" + evmAddrClean(evmWallet.address).substring(0, 38);
+            userAccount.addresses.EVM = userAccount.walletEVM.address;
+            userAccount.addresses.TRON = "T" + ethers.utils.sha256(userAccount.walletEVM.address).substring(2, 35);
+            userAccount.addresses.TON = "EQB" + ethers.utils.keccak256(userAccount.walletEVM.address).substring(2, 40);
+            userAccount.addresses.SOL = "Sol" + evmAddrClean(userAccount.walletEVM.address).substring(0, 40);
+            userAccount.addresses.BTC = "bc1q" + evmAddrClean(userAccount.walletEVM.address).substring(0, 38);
 
             document.getElementById('addr-evm-display').innerText = userAccount.addresses.EVM;
             document.getElementById('addr-tron-display').innerText = userAccount.addresses.TRON;
@@ -684,41 +710,54 @@
 
         function evmAddrClean(addr) { return addr.replace('0x', '').toLowerCase(); }
 
-        // РЕАЛЬНЫЙ ОПРОС БЛОКЧЕЙНА ЧЕРЕЗ PUBLIC RPC (БИНАНС/ЭФИР)
-        async function fetchOnChainBalances() {
-            try {
-                // Пример проверки баланса BEP-20 USDT на BSC Mainnet через публичный JSON-RPC
-                const bscRpcUrl = "https://bsc-dataseed.binance.org/";
-                const usdtContractBsc = "0x55d398326f99059ff775485246999027b3197955"; // USDT BEP-20
-                const userAddr = userAccount.addresses.EVM.toLowerCase().replace('0x', '');
-                
-                // balanceOf(address) signature: 0x70a08231 + padded address
-                const dataPayload = "0x70a08231000000000000000000000000" + userAddr;
+        function onRecipientAddressInput(addr) {
+            addr = addr.trim();
+            const netSelect = document.getElementById('send-network-select');
+            const hint = document.getElementById('detected-network-hint');
+            
+            let detectedNet = null;
+            if (addr.startsWith('0x') && addr.length === 42) {
+                detectedNet = 'BEP-20';
+            } else if (addr.startsWith('T') && addr.length >= 33) {
+                detectedNet = 'TRC-20';
+            } else if (addr.startsWith('EQ') || addr.startsWith('UQ')) {
+                detectedNet = 'TON Network';
+            } else if (addr.startsWith('bc1') || addr.startsWith('1') || addr.startsWith('3')) {
+                detectedNet = 'Bitcoin (Native SegWit)';
+            } else if (addr.length >= 32 && !addr.startsWith('0x')) {
+                detectedNet = 'Solana Network';
+            }
 
-                const response = await fetch(bscRpcUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        jsonrpc: "2.0",
-                        method: "eth_call",
-                        params: [{ to: usdtContractBsc, data: dataPayload }, "latest"],
-                        id: 1
-                    })
-                });
-
-                const json = await response.json();
-                if (json.result && json.result !== "0x") {
-                    const rawBalance = parseInt(json.result, 16);
-                    const formattedUsdt = rawBalance / 1e18; // USDT на BSC имеет 18 знаков
-                    
-                    // Обновляем баланс USDT в массиве активов
-                    const usdtAsset = top20Assets.find(a => a.id === 'USDT');
-                    if (usdtAsset) {
-                        usdtAsset.balance = formattedUsdt;
+            if (detectedNet) {
+                for (let i = 0; i < netSelect.options.length; i++) {
+                    if (netSelect.options[i].value.includes(detectedNet)) {
+                        netSelect.selectedIndex = i;
+                        hint.innerText = `Сеть определена автоматически: ${netSelect.options[i].value}`;
+                        hint.style.display = 'block';
+                        break;
                     }
                 }
+            } else {
+                hint.style.display = 'none';
+            }
+        }
+
+        async function fetchOnChainBalances() {
+            try {
+                const bscProvider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+                const usdtAddress = "0x55d398326f99059ff775485246999027b3197955";
+                const abi = ["function balanceOf(address owner) view returns (uint256)"];
+                const usdtContract = new ethers.Contract(usdtAddress, abi, bscProvider);
+
+                const balanceWei = await usdtContract.balanceOf(userAccount.addresses.EVM);
+                const formattedUsdt = parseFloat(ethers.utils.formatUnits(balanceWei, 18));
+
+                const usdtAsset = top20Assets.find(a => a.id === 'USDT');
+                if (usdtAsset) {
+                    usdtAsset.balance = formattedUsdt;
+                }
             } catch (e) {
-                console.log("On-chain sync error:", e);
+                console.log("RPC Balance Sync Error:", e);
             }
             renderAssetsList();
             recalcTotalBalance();
@@ -854,15 +893,58 @@
 
         function openSendModal() { openModal('send-modal'); }
 
-        function executeSendTransaction() {
-            const asset = document.getElementById('send-asset-select').value;
-            const net = document.getElementById('send-network-select').value;
-            const addr = document.getElementById('send-target-addr`').value;
-            const amt = document.getElementById('send-target-amount').value;
+        async function executeSendTransaction() {
+            const assetId = document.getElementById('send-asset-select').value;
+            const network = document.getElementById('send-network-select').value;
+            const recipient = document.getElementById('send-target-addr').value;
+            const amount = document.getElementById('send-target-amount').value;
 
-            if(!addr || !amt) return alert('Укажите адрес и сумму перевода!');
-            alert(`Транзакция отправки ${amt} ${asset} в сети ${net} сформирована!`);
-            closeModals();
+            if (!recipient || !amount) {
+                alert('Пожалуйста, заполните адрес и сумму!');
+                return;
+            }
+
+            const asset = top20Assets.find(a => a.id === assetId);
+            if (parseFloat(amount) > asset.balance) {
+                alert('Недостаточно средств на балансе!');
+                return;
+            }
+
+            const btn = document.getElementById('confirm-send-btn');
+            btn.innerText = 'Отправка в блокчейн...';
+            btn.disabled = true;
+
+            try {
+                const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+                const walletConnected = userAccount.walletEVM.connect(provider);
+
+                let txResponse;
+
+                if (assetId === 'USDT' && (network.includes('BEP-20') || network.includes('BSC'))) {
+                    const usdtAddress = "0x55d398326f99059ff775485246999027b3197955";
+                    const abi = ["function transfer(address to, uint256 value) public returns (bool)"];
+                    const contract = new ethers.Contract(usdtAddress, abi, walletConnected);
+
+                    const parsedAmount = ethers.utils.parseUnits(amount, 18);
+                    txResponse = await contract.transfer(recipient, parsedAmount);
+                } else {
+                    const parsedAmount = ethers.utils.parseEther(amount);
+                    txResponse = await walletConnected.sendTransaction({
+                        to: recipient,
+                        value: parsedAmount
+                    });
+                }
+
+                alert(`Транзакция успешно отправлена!\nХеш: ${txResponse.hash}`);
+                closeModals();
+                fetchOnChainBalances();
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка отправки: ' + (err.message || 'Недостаточно средств для оплаты комиссионного газа BNB'));
+            } finally {
+                btn.innerText = 'Подтвердить перевод';
+                btn.disabled = false;
+            }
         }
 
         function copyDepositAddress() {
