@@ -421,7 +421,7 @@
 
         <div id="tab-home" class="tab-content active">
             <div class="card">
-                <div class="card-title" style="text-align: center;">Суммарный баланс (Bybit API)</div>
+                <div class="card-title" style="text-align: center;">Суммарный баланс (On-Chain RPC)</div>
                 <div class="balance-hero">
                     <div class="balance-amount" id="total-balance-usd">$0.00</div>
                     <div class="balance-subtitle" id="total-balance-rub">≈ 0.00 ₽</div>
@@ -458,7 +458,7 @@
             <div class="card">
                 <div class="card-title" style="display: flex; justify-content: space-between;">
                     <span>Активы (ТОП-20)</span>
-                    <span id="price-update-indicator" style="color: var(--success); font-size: 9px;">● Live</span>
+                    <span id="price-update-indicator" style="color: var(--success); font-size: 9px;">● Live Sync</span>
                 </div>
                 <div class="asset-list" id="asset-list-container"></div>
             </div>
@@ -624,7 +624,6 @@
             addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } 
         };
 
-        // СТРОГОЕ СООТВЕТСТВИЕ МОНЕТ И ИХ РЕАЛЬНЫХ СЕТЕЙ БЕЗ РАНДОМА
         const top20Assets = [
             { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['TRC-20', 'ERC-20', 'BEP-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 0.0 },
             { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (Native SegWit)', 'Lightning Network'], price: 65000.0, balance: 0.0 },
@@ -653,7 +652,9 @@
             renderAssetsList();
             initSelects();
             fetchPricesFromBybit();
+            fetchOnChainBalances(); // Живой опрос балансов с блокчейна
             setInterval(fetchPricesFromBybit, 15000);
+            setInterval(fetchOnChainBalances, 15000); // Опрос балансов каждые 15 сек
         };
 
         function initAccount() {
@@ -682,6 +683,46 @@
         }
 
         function evmAddrClean(addr) { return addr.replace('0x', '').toLowerCase(); }
+
+        // РЕАЛЬНЫЙ ОПРОС БЛОКЧЕЙНА ЧЕРЕЗ PUBLIC RPC (БИНАНС/ЭФИР)
+        async function fetchOnChainBalances() {
+            try {
+                // Пример проверки баланса BEP-20 USDT на BSC Mainnet через публичный JSON-RPC
+                const bscRpcUrl = "https://bsc-dataseed.binance.org/";
+                const usdtContractBsc = "0x55d398326f99059ff775485246999027b3197955"; // USDT BEP-20
+                const userAddr = userAccount.addresses.EVM.toLowerCase().replace('0x', '');
+                
+                // balanceOf(address) signature: 0x70a08231 + padded address
+                const dataPayload = "0x70a08231000000000000000000000000" + userAddr;
+
+                const response = await fetch(bscRpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        method: "eth_call",
+                        params: [{ to: usdtContractBsc, data: dataPayload }, "latest"],
+                        id: 1
+                    })
+                });
+
+                const json = await response.json();
+                if (json.result && json.result !== "0x") {
+                    const rawBalance = parseInt(json.result, 16);
+                    const formattedUsdt = rawBalance / 1e18; // USDT на BSC имеет 18 знаков
+                    
+                    // Обновляем баланс USDT в массиве активов
+                    const usdtAsset = top20Assets.find(a => a.id === 'USDT');
+                    if (usdtAsset) {
+                        usdtAsset.balance = formattedUsdt;
+                    }
+                }
+            } catch (e) {
+                console.log("On-chain sync error:", e);
+            }
+            renderAssetsList();
+            recalcTotalBalance();
+        }
 
         async function fetchPricesFromBybit() {
             try {
@@ -780,7 +821,6 @@
             const selectedNet = document.getElementById('deposit-network-select').value || '';
             let targetAddress = userAccount.addresses.EVM;
 
-            // Строгая привязка адреса к выбранной монете и её реальной сети
             if (selectedAsset === 'BTC' || selectedNet.includes('Bitcoin')) {
                 targetAddress = userAccount.addresses.BTC;
             } else if (selectedAsset === 'SOL' || selectedNet.includes('Solana')) {
@@ -817,7 +857,7 @@
         function executeSendTransaction() {
             const asset = document.getElementById('send-asset-select').value;
             const net = document.getElementById('send-network-select').value;
-            const addr = document.getElementById('send-target-addr').value;
+            const addr = document.getElementById('send-target-addr`').value;
             const amt = document.getElementById('send-target-amount').value;
 
             if(!addr || !amt) return alert('Укажите адрес и сумму перевода!');
