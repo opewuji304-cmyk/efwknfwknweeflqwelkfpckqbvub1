@@ -28,9 +28,9 @@
             --success: #34D399;
             --warning: #F59E0B;
             --danger: #EF4444;
-            --radius-lg: 22px;
-            --radius-md: 14px;
-            --radius-sm: 10px;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
         }
 
         * {
@@ -48,10 +48,11 @@
             display: flex;
             justify-content: center;
             background-image: 
-                radial-gradient(circle at 15% 10%, rgba(91, 60, 140, 0.22) 0%, transparent 45%),
-                radial-gradient(circle at 85% 90%, rgba(124, 82, 194, 0.15) 0%, transparent 45%);
+                radial-gradient(circle at 15% 10%, rgba(91, 60, 140, 0.25) 0%, transparent 45%),
+                radial-gradient(circle at 85% 90%, rgba(124, 82, 194, 0.18) 0%, transparent 45%);
             background-attachment: fixed;
             padding-bottom: 100px;
+            overflow-x: hidden;
         }
 
         .app-container {
@@ -108,6 +109,10 @@
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .sbp-btn:active {
+            transform: scale(0.95);
         }
 
         .card {
@@ -116,6 +121,8 @@
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             padding: 18px;
+            position: relative;
+            overflow: hidden;
         }
 
         .card-title {
@@ -133,12 +140,13 @@
         }
 
         .balance-amount {
-            font-size: 34px;
+            font-size: 36px;
             font-weight: 800;
             letter-spacing: -0.8px;
-            background: linear-gradient(135deg, #FFFFFF, var(--accent-light));
+            background: linear-gradient(135deg, #FFFFFF 30%, var(--accent-light) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            transition: all 0.3s ease;
         }
 
         .balance-subtitle {
@@ -164,6 +172,12 @@
             padding: 12px 4px;
             border-radius: var(--radius-md);
             cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .action-icon-circle {
@@ -205,11 +219,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 12px;
+            padding: 12px 14px;
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
             cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .asset-item:active {
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .asset-info {
@@ -258,6 +278,11 @@
             flex-direction: column;
             gap: 6px;
             margin-bottom: 10px;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--border-active);
         }
 
         .input-label {
@@ -285,7 +310,7 @@
             background: linear-gradient(135deg, #5B3C8C, #7C52C2);
             border: none;
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             border-radius: var(--radius-md);
             color: white;
             font-size: 15px;
@@ -293,10 +318,12 @@
             cursor: pointer;
             box-shadow: 0 6px 20px var(--accent-glow);
             margin-top: 6px;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
         }
 
         .primary-btn:active {
-            transform: scale(0.98);
+            transform: scale(0.96);
+            opacity: 0.9;
         }
 
         .nav-bar {
@@ -306,7 +333,7 @@
             transform: translateX(-50%);
             width: 100%;
             max-width: 440px;
-            background: rgba(12, 7, 20, 0.95);
+            background: rgba(12, 7, 20, 0.92);
             backdrop-filter: blur(20px);
             border-top: 1px solid var(--border-subtle);
             display: flex;
@@ -325,6 +352,11 @@
             font-size: 10px;
             cursor: pointer;
             flex: 1;
+            transition: color 0.2s ease, transform 0.15s ease;
+        }
+
+        .nav-item:active {
+            transform: scale(0.9);
         }
 
         .nav-item.active {
@@ -343,6 +375,7 @@
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
+            transition: stroke 0.2s ease;
         }
 
         .nav-center-btn {
@@ -357,17 +390,33 @@
             border: 3px solid var(--bg-main);
             margin-top: -16px;
             cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
+        .nav-center-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* iOS SPRING MODAL ANIMATIONS */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(0px);
             z-index: 200;
-            display: none;
+            display: flex;
             justify-content: center;
             align-items: flex-end;
+            visibility: hidden;
+            opacity: 0;
+            transition: background 0.35s ease, backdrop-filter 0.35s ease, opacity 0.35s ease, visibility 0.35s;
+        }
+
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
         }
 
         .modal-sheet {
@@ -377,19 +426,43 @@
             border-top: 1px solid var(--border-active);
             border-top-left-radius: var(--radius-lg);
             border-top-right-radius: var(--radius-lg);
-            padding: 20px;
+            padding: 12px 20px 24px 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
             max-height: 85vh;
             overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-sheet {
+            transform: translateY(0);
+        }
+
+        /* iOS SWIPE INDICATOR PILL */
+        .modal-swipe-pill {
+            width: 36px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            align-self: center;
+            margin-bottom: 8px;
         }
 
         .tab-content {
             display: none;
             flex-direction: column;
             gap: 16px;
+            animation: fadeIn 0.3s ease;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .tab-content.active {
             display: flex;
         }
@@ -517,7 +590,7 @@
                     <span>12/28</span>
                 </div>
             </div>
-            <button class="primary-btn" onclick="alert('Выпуск виртуальной карты активирован!')">+ Создать новую карту</button>
+            <button class="primary-btn" onclick="triggerHaptic(); alert('Выпуск виртуальной карты активирован!')">+ Создать новую карту</button>
         </div>
 
         <div id="tab-exchange" class="tab-content">
@@ -539,7 +612,7 @@
                         <option value="RUB">RUB</option>
                     </select>
                 </div>
-                <button class="primary-btn" onclick="alert('Заявка создана!')">Создать заявку СБП</button>
+                <button class="primary-btn" onclick="triggerHaptic(); alert('Заявка создана!')">Создать заявку СБП</button>
             </div>
         </div>
 
@@ -575,9 +648,10 @@
     <!-- MODAL: SEND -->
     <div id="send-modal" class="modal-overlay" onclick="closeModals(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="modal-swipe-pill"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <div style="font-weight: 700; font-size: 16px;">Отправить монету</div>
-                <div style="cursor: pointer; color: var(--text-muted);" onclick="closeModals()">✕</div>
+                <div style="cursor: pointer; color: var(--text-muted); padding: 4px 8px; font-weight: 700;" onclick="closeModals()">✕</div>
             </div>
 
             <div class="input-group">
@@ -623,9 +697,10 @@
     <!-- MODAL: DEPOSIT -->
     <div id="deposit-modal" class="modal-overlay" onclick="closeModals(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="modal-swipe-pill"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <div style="font-weight: 700; font-size: 16px;">Пополнение баланса</div>
-                <div style="cursor: pointer; color: var(--text-muted);" onclick="closeModals()">✕</div>
+                <div style="cursor: pointer; color: var(--text-muted); padding: 4px 8px; font-weight: 700;" onclick="closeModals()">✕</div>
             </div>
             
             <div class="input-group">
@@ -670,12 +745,20 @@
         const tg = window.Telegram ? window.Telegram.WebApp : null;
         if (tg) tg.expand();
 
+        function triggerHaptic() {
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+
         let userAccount = { 
             mnemonic: '', 
             walletEVM: null,
             bnbBalance: 0.0,
             addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } 
         };
+
+        let currentDisplayUsd = 0.0; // Для анимации начисления баланса
 
         const top20Assets = [
             { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['BEP-20', 'TRC-20', 'ERC-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 0.0 },
@@ -773,7 +856,6 @@
             try {
                 const bscProvider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
                 
-                // 1. Чтение нативного баланса BNB для комиссии (Gas)
                 const rawBnb = await bscProvider.getBalance(userAccount.addresses.EVM);
                 userAccount.bnbBalance = parseFloat(ethers.utils.formatEther(rawBnb));
                 
@@ -781,7 +863,6 @@
                 if (bnbAsset) bnbAsset.balance = userAccount.bnbBalance;
                 document.getElementById('bnb-gas-balance').innerText = `${userAccount.bnbBalance.toFixed(4)} BNB`;
 
-                // 2. Чтение баланса токена USDT BEP-20
                 const usdtAddress = "0x55d398326f99059ff775485246999027b3197955";
                 const abi = ["function balanceOf(address owner) view returns (uint256)"];
                 const usdtContract = new ethers.Contract(usdtAddress, abi, bscProvider);
@@ -824,7 +905,7 @@
                 const fiatVal = (asset.balance * asset.price).toFixed(2);
                 const div = document.createElement('div');
                 div.className = 'asset-item';
-                div.onclick = () => openSendModalWithAsset(asset.id);
+                div.onclick = () => { triggerHaptic(); openSendModalWithAsset(asset.id); };
                 div.innerHTML = `
                     <div class="asset-info">
                         <img src="${asset.icon}" class="asset-icon-img" alt="${asset.id}" onerror="this.src='https://cryptologos.cc/logos/tether-usdt-logo.png'">
@@ -842,11 +923,36 @@
             });
         }
 
+        // АНИМАЦИЯ ПЛАВНОГО НАЧИСЛЕНИЯ БАЛАНСА (COUNT-UP 1.5 сек)
         function recalcTotalBalance() {
-            let totalUsd = 0;
-            top20Assets.forEach(a => totalUsd += (a.balance * a.price));
-            document.getElementById('total-balance-usd').innerText = '$' + totalUsd.toFixed(2);
-            document.getElementById('total-balance-rub').innerText = '≈ ' + (totalUsd * 95.0).toFixed(2) + ' ₽';
+            let targetTotalUsd = 0;
+            top20Assets.forEach(a => targetTotalUsd += (a.balance * a.price));
+
+            animateBalanceCountUp(currentDisplayUsd, targetTotalUsd, 1500);
+        }
+
+        function animateBalanceCountUp(startVal, endVal, duration) {
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease-Out Quartic функция плавности
+                const easeProgress = 1 - Math.pow(1 - progress, 4); 
+                const currentVal = startVal + (endVal - startVal) * easeProgress;
+
+                document.getElementById('total-balance-usd').innerText = '$' + currentVal.toFixed(2);
+                document.getElementById('total-balance-rub').innerText = '≈ ' + (currentVal * 95.0).toFixed(2) + ' ₽';
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    currentDisplayUsd = endVal;
+                }
+            }
+
+            requestAnimationFrame(update);
         }
 
         function initSelects() {
@@ -876,7 +982,6 @@
                 });
             }
 
-            // Показываем предупреждение если BNB равен 0 для комиссии
             const warningBox = document.getElementById('gas-warning-box');
             if (userAccount.bnbBalance < 0.0003) {
                 warningBox.style.display = 'block';
@@ -935,9 +1040,10 @@
             openModal('send-modal');
         }
 
-        function openSendModal() { openModal('send-modal'); }
+        function openSendModal() { triggerHaptic(); openModal('send-modal'); }
 
         async function executeSendTransaction() {
+            triggerHaptic();
             const assetId = document.getElementById('send-asset-select').value;
             const network = document.getElementById('send-network-select').value;
             const recipient = document.getElementById('send-target-addr').value.trim();
@@ -954,7 +1060,6 @@
                 return;
             }
 
-            // ПРОВЕРКА НАЛИЧИЯ BNB ДЛЯ ОПЛАТЫ КОМИССИИ (GAS CHECK)
             if (userAccount.bnbBalance < 0.0003) {
                 alert('Недостаточно BNB для оплаты комиссии сети (Gas)!\n\nДля перевода токенов BEP-20 необходимо пополнить кошелек небольшой суммой BNB (~$0.20).');
                 return;
@@ -1002,12 +1107,14 @@
         }
 
         function copyDepositAddress() {
+            triggerHaptic();
             const addr = document.getElementById('deposit-addr-display').innerText;
             navigator.clipboard.writeText(addr);
             alert('Адрес скопирован в буфер обмена!');
         }
 
         function switchTab(tabId, navEl) {
+            triggerHaptic();
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
@@ -1015,14 +1122,20 @@
         }
 
         function openModal(id) { 
-            document.getElementById(id).style.display = 'flex'; 
+            triggerHaptic();
+            const modal = document.getElementById(id);
+            modal.classList.add('active');
             if(id === 'deposit-modal') onDepositAssetChange();
             if(id === 'send-modal') onSendAssetChange();
         }
 
-        function closeModals(e) { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
+        function closeModals(e) { 
+            triggerHaptic();
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); 
+        }
         
         function toggleSeed() {
+            triggerHaptic();
             const box = document.getElementById('seed-box');
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
         }
