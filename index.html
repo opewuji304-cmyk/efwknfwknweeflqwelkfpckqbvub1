@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether Financial Terminal</title>
+    <title>Aether Multi-Chain Terminal</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -13,7 +13,7 @@
             --bg-main: #0A0512;
             --bg-card: rgba(255, 255, 255, 0.035);
             --bg-card-hover: rgba(255, 255, 255, 0.06);
-            --bg-input: rgba(18, 12, 30, 0.7);
+            --bg-input: rgba(18, 12, 30, 0.75);
             
             --accent-primary: #5B3C8C;
             --accent-soft: #7C52C2;
@@ -91,7 +91,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
             box-shadow: 0 4px 12px var(--accent-glow);
             border: 1px solid var(--border-active);
         }
@@ -100,12 +100,6 @@
             font-size: 15px;
             font-weight: 700;
             letter-spacing: -0.2px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
         }
 
         .sbp-btn {
@@ -119,7 +113,12 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+        }
+
+        .sbp-logo-img {
+            height: 14px;
+            width: auto;
         }
 
         /* CARD STYLES */
@@ -162,7 +161,7 @@
             margin-top: 2px;
         }
 
-        /* ACTION GRID (4 buttons) */
+        /* ACTION GRID */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -196,8 +195,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
             box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .svg-icon {
+            width: 20px;
+            height: 20px;
+            fill: #FFFFFF;
         }
 
         .action-label {
@@ -206,72 +210,99 @@
             color: var(--text-main);
         }
 
-        /* ASSETS & SERVICES LIST */
-        .list-item {
+        /* ASSETS LIST */
+        .asset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .asset-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(157, 123, 219, 0.08);
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
             cursor: pointer;
+            transition: background 0.2s;
         }
 
-        .list-item:last-child {
-            border-bottom: none;
+        .asset-item:hover {
+            background: var(--bg-card-hover);
         }
 
-        .item-info {
+        .asset-info {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .item-icon {
-            width: 38px;
-            height: 38px;
+        .asset-icon-img {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: var(--bg-input);
-            border: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
+            object-fit: cover;
         }
 
-        .item-title {
-            font-size: 14px;
+        .asset-name {
+            font-size: 13px;
             font-weight: 600;
         }
 
-        .item-desc {
-            font-size: 11px;
+        .asset-symbol {
+            font-size: 10px;
             color: var(--text-muted);
         }
 
-        /* INPUTS & MODALS */
+        .asset-val {
+            text-align: right;
+        }
+
+        .asset-amount {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .asset-fiat {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* INPUTS & SELECTS */
         .input-group {
             background: var(--bg-input);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
             padding: 12px 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 6px;
             margin-bottom: 10px;
         }
 
-        .input-group:focus-within {
-            border-color: var(--border-active);
+        .input-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        .amount-input {
+        .amount-input, .select-input {
             background: transparent;
             border: none;
             outline: none;
             color: var(--text-main);
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 600;
             width: 100%;
+        }
+
+        .select-input option {
+            background: #130B22;
+            color: var(--text-main);
         }
 
         .primary-btn {
@@ -292,7 +323,7 @@
             transform: scale(0.98);
         }
 
-        /* BOTTOM NAVIGATION (5 items with center QR) */
+        /* BOTTOM NAVIGATION */
         .nav-bar {
             position: fixed;
             bottom: 0;
@@ -319,7 +350,6 @@
             color: var(--text-muted);
             font-size: 10px;
             cursor: pointer;
-            transition: color 0.2s;
             flex: 1;
         }
 
@@ -327,11 +357,17 @@
             color: var(--accent-light);
         }
 
-        .nav-icon {
-            font-size: 18px;
+        .nav-item.active .svg-nav-icon {
+            fill: var(--accent-light);
         }
 
-        /* Center QR Scan Button */
+        .svg-nav-icon {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-muted);
+            transition: fill 0.2s;
+        }
+
         .nav-center-btn {
             width: 48px;
             height: 48px;
@@ -340,8 +376,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 20px;
             box-shadow: 0 4px 16px var(--accent-glow);
             border: 3px solid var(--bg-main);
             margin-top: -16px;
@@ -370,7 +404,7 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
             animation: slideUp 0.25s ease-out;
             max-height: 85vh;
             overflow-y: auto;
@@ -401,16 +435,6 @@
             font-family: monospace;
             text-align: center;
         }
-        
-        .badge-kfc {
-            background: rgba(52, 211, 153, 0.1);
-            border: 1px solid rgba(52, 211, 153, 0.3);
-            color: var(--success);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-        }
     </style>
 </head>
 <body>
@@ -422,119 +446,76 @@
             <div class="brand">
                 <div class="brand-avatar" id="header-avatar-initials">AF</div>
                 <div>
-                    <div class="brand-title">Aether Wallet</div>
+                    <div class="brand-title">Aether Multi-Chain</div>
                     <div style="font-size: 10px; color: var(--text-muted);" id="header-username">@user</div>
                 </div>
             </div>
-            <div class="header-actions">
-                <div class="sbp-btn" onclick="openModal('deposit-modal')">⚡ СБП</div>
+            <div class="sbp-btn" onclick="openModal('deposit-modal')">
+                <span>СБП</span>
             </div>
         </div>
 
-        <!-- TAB 1: ГЛАВНАЯ (HOME / DASHBOARD) -->
+        <!-- TAB 1: DASHBOARD -->
         <div id="tab-home" class="tab-content active">
             
-            <!-- Balance Card -->
+            <!-- Hero Balance Card -->
             <div class="card">
-                <div class="card-title" style="text-align: center;">Общий баланс</div>
+                <div class="card-title" style="text-align: center;">Суммарный баланс (Bybit API)</div>
                 <div class="balance-hero">
-                    <div class="balance-amount" id="dash-usd">$0.00</div>
-                    <div class="balance-subtitle" id="dash-rub">0.00 ₽</div>
+                    <div class="balance-amount" id="total-balance-usd">$0.00</div>
+                    <div class="balance-subtitle" id="total-balance-rub">≈ 0.00 ₽</div>
                 </div>
 
-                <!-- Action Grid -->
+                <!-- Actions -->
                 <div class="action-grid">
-                    <div class="action-btn" onclick="openModal('send-modal')">
-                        <div class="action-icon-circle">↗</div>
+                    <div class="action-btn" onclick="openSendModal()">
+                        <div class="action-icon-circle">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </div>
                         <div class="action-label">Отправить</div>
                     </div>
                     <div class="action-btn" onclick="openModal('deposit-modal')">
-                        <div class="action-icon-circle">+</div>
+                        <div class="action-icon-circle">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        </div>
                         <div class="action-label">Пополнить</div>
                     </div>
                     <div class="action-btn" onclick="switchTab('exchange', document.querySelectorAll('.nav-item')[3])">
-                        <div class="action-icon-circle">⇄</div>
+                        <div class="action-icon-circle">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                        </div>
                         <div class="action-label">Обмен</div>
                     </div>
                     <div class="action-btn" onclick="switchTab('cards', document.querySelectorAll('.nav-item')[3])">
-                        <div class="action-icon-circle">💳</div>
+                        <div class="action-icon-circle">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V10h16v8zm0-10H4V6h16v2z"/></svg>
+                        </div>
                         <div class="action-label">Карты</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Assets Widget -->
+            <!-- TOP 20 ASSETS LIST -->
             <div class="card">
-                <div class="card-title">Активы в сети</div>
-                <div class="list-item" onclick="openAssetDetail('USDT', 'TRC-20')">
-                    <div class="item-info">
-                        <div class="item-icon">💵</div>
-                        <div>
-                            <div class="item-title">Tether USDT</div>
-                            <div class="item-desc">TRC-20 / BEP-20</div>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="item-title">0.00 USDT</div>
-                        <div class="item-desc">$0.00</div>
-                    </div>
+                <div class="card-title" style="display: flex; justify-content: space-between;">
+                    <span>Активы (ТОП-20)</span>
+                    <span id="price-update-indicator" style="color: var(--success); font-size: 9px;">● Live</span>
                 </div>
-                <div class="list-item" onclick="openAssetDetail('TON', 'TON')">
-                    <div class="item-info">
-                        <div class="item-icon">💎</div>
-                        <div>
-                            <div class="item-title">Toncoin</div>
-                            <div class="item-desc">TON Network</div>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="item-title">0.00 TON</div>
-                        <div class="item-desc">$0.00</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Services Grid -->
-            <div class="card">
-                <div class="card-title">Сервисы и услуги</div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px;">
-                    <div class="action-btn" style="align-items: flex-start; padding: 12px;" onclick="switchTab('cards', document.querySelectorAll('.nav-item')[3])">
-                        <div style="font-size: 18px;">💳</div>
-                        <div style="font-weight: 600; font-size: 12px; margin-top: 4px;">Виртуальные карты</div>
-                        <div style="font-size: 10px; color: var(--text-muted);">Apple Pay / Online</div>
-                    </div>
-                    <div class="action-btn" style="align-items: flex-start; padding: 12px;" onclick="openModal('deposit-modal')">
-                        <div style="font-size: 18px;">⚡</div>
-                        <div style="font-weight: 600; font-size: 12px; margin-top: 4px;">Пополнение СБП</div>
-                        <div style="font-size: 10px; color: var(--success);">Мгновенно 0%</div>
-                    </div>
+                <div class="asset-list" id="asset-list-container">
+                    <!-- Заполняется динамически -->
                 </div>
             </div>
 
         </div>
 
-        <!-- TAB 2: ИСТОРИЯ (HISTORY) -->
+        <!-- TAB 2: HISTORY -->
         <div id="tab-history" class="tab-content">
-            <div class="card">
-                <div class="card-title">Статистика операций</div>
-                <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md);">
-                    <div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Траты</div>
-                        <div style="font-size: 16px; font-weight: 700; color: var(--danger);">0.00 ₽</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Доходы</div>
-                        <div style="font-size: 16px; font-weight: 700; color: var(--success);">0.00 ₽</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card" style="text-align: center; padding: 30px 18px; color: var(--text-muted);">
-                <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
-                <div style="font-size: 13px;">История операций пуста</div>
+            <div class="card" style="text-align: center; padding: 40px 18px; color: var(--text-muted);">
+                <div style="font-size: 13px;">История транзакций пуста</div>
             </div>
         </div>
 
-        <!-- TAB 3: КАРТА (VIRTUAL CARDS) -->
+        <!-- TAB 3: CARDS -->
         <div id="tab-cards" class="tab-content">
             <div class="card" style="background: linear-gradient(135deg, #1A102F, #2A1A4A); border: 1px solid var(--border-active);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -543,60 +524,54 @@
                 </div>
                 <div style="font-size: 20px; font-weight: 700; letter-spacing: 2px; margin-bottom: 16px;">•••• •••• •••• 9921</div>
                 <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
-                    <span>holder: WEB3 USER</span>
+                    <span>HOLDER: WEB3 USER</span>
                     <span>12/28</span>
                 </div>
             </div>
-            <button class="primary-btn" onclick="alert('Выпуск виртуальной карты инициализирован!')">+ Создать новую карту</button>
+            <button class="primary-btn" onclick="alert('Выпуск виртуальной карты активирован!')">+ Создать новую карту</button>
         </div>
 
-        <!-- TAB 4: ОБМЕН (EXCHANGE / TERMINAL) -->
+        <!-- TAB 4: EXCHANGE -->
         <div id="tab-exchange" class="tab-content">
             <div class="card">
-                <div class="card-title">Обмен активов</div>
+                <div class="card-title">Мгновенный обмен</div>
                 <div class="input-group">
+                    <span class="input-label">Вы отдаете</span>
                     <input type="number" id="ex-from" class="amount-input" value="10000" oninput="calcExchange()">
-                    <select id="ex-curr-from" style="background:transparent; border:none; color:var(--text-main); font-weight:700; outline:none;" onchange="calcExchange()">
-                        <option value="RUB">RUB</option>
+                    <select id="ex-curr-from" class="select-input" onchange="calcExchange()">
+                        <option value="RUB">RUB (СБП)</option>
                         <option value="USDT">USDT</option>
                     </select>
                 </div>
-                <div style="text-align: center; margin: -6px 0 10px 0; color: var(--accent-light); font-weight: 700;">↓</div>
                 <div class="input-group">
+                    <span class="input-label">Вы получаете</span>
                     <input type="number" id="ex-to" class="amount-input" readonly>
-                    <select id="ex-curr-to" style="background:transparent; border:none; color:var(--text-main); font-weight:700; outline:none;" disabled>
+                    <select id="ex-curr-to" class="select-input" disabled>
                         <option value="USDT">USDT</option>
                         <option value="RUB">RUB</option>
                     </select>
                 </div>
-                <button class="primary-btn" onclick="submitExchange()">Подтвердить обмен</button>
+                <button class="primary-btn" onclick="alert('Заявка создана!')">Создать заявку СБП</button>
             </div>
         </div>
 
-        <!-- TAB 5: МЕНЮ (PROFILE & SETTINGS) -->
+        <!-- TAB 5: PROFILE & WALLETS -->
         <div id="tab-menu" class="tab-content">
-            <div class="card" style="display: flex; gap: 12px; align-items: center;">
-                <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;">AF</div>
-                <div>
-                    <div id="profile-name" style="font-weight: 700; font-size: 15px;">Crypto User</div>
-                    <div id="profile-id" style="font-size: 12px; color: var(--text-muted);">ID: 000000</div>
-                </div>
+            <div class="card">
+                <div class="card-title">Кошельки аккаунта по сетям</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">EVM (ETH, BSC, Polygon, AVAX):</div>
+                <div class="address-box" id="addr-evm-display">Загрузка...</div>
+
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">TRON Network (TRC-20):</div>
+                <div class="address-box" id="addr-tron-display">Загрузка...</div>
+
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">TON Network:</div>
+                <div class="address-box" id="addr-ton-display">Загрузка...</div>
             </div>
 
             <div class="card">
-                <div class="card-title">Статус аккаунта</div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 13px; font-weight: 600;">KYC Уровень: Basic</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Лимиты СБП активны</div>
-                    </div>
-                    <span class="badge-kfc">Verified</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Безопасность и бэкап</div>
-                <button class="primary-btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); margin-top: 0;" onclick="toggleSeed()">🔑 Показать Seed-фразу (24 слова)</button>
+                <div class="card-title">Безопасность</div>
+                <button class="primary-btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);" onclick="toggleSeed()">🔑 Резервная копия (24 слова)</button>
                 <div id="seed-box" style="display: none; margin-top: 10px;">
                     <div class="address-box" id="seed-words-text" style="font-size: 11px; line-height: 1.6; text-align: left; padding: 12px;"></div>
                 </div>
@@ -609,16 +584,31 @@
     <div id="send-modal" class="modal-overlay" onclick="closeModals(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-weight: 700; font-size: 16px;">Отправить средства</div>
+                <div style="font-weight: 700; font-size: 16px;">Отправить монету</div>
                 <div style="cursor: pointer; color: var(--text-muted);" onclick="closeModals()">✕</div>
             </div>
-            <div class="input-group" style="margin-top: 10px;">
-                <input type="text" id="send-address" class="amount-input" placeholder="Адрес кошелька или @username...">
-            </div>
+
             <div class="input-group">
-                <input type="number" id="send-sum" class="amount-input" placeholder="Сумма перевода">
+                <span class="input-label">Выберите монету</span>
+                <select id="send-asset-select" class="select-input" onchange="onSendAssetChange()"></select>
             </div>
-            <button class="primary-btn" onclick="executeSend()">Отправить</button>
+
+            <div class="input-group">
+                <span class="input-label">Выберите сеть перевода</span>
+                <select id="send-network-select" class="select-input"></select>
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">Адрес получателя</span>
+                <input type="text" id="send-target-addr" class="amount-input" placeholder="Вставьте адрес...">
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">Сумма отправки</span>
+                <input type="number" id="send-target-amount" class="amount-input" placeholder="0.00">
+            </div>
+
+            <button class="primary-btn" onclick="executeSendTransaction()">Подтвердить перевод</button>
         </div>
     </div>
 
@@ -626,35 +616,40 @@
     <div id="deposit-modal" class="modal-overlay" onclick="closeModals(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-weight: 700; font-size: 16px;">Пополнить баланс</div>
+                <div style="font-weight: 700; font-size: 16px;">Пополнение баланса</div>
                 <div style="cursor: pointer; color: var(--text-muted);" onclick="closeModals()">✕</div>
             </div>
+            
+            <div class="input-group">
+                <span class="input-label">Выберите монету для пополнения</span>
+                <select id="deposit-asset-select" class="select-input" onchange="updateDepositQR()"></select>
+            </div>
+
             <div style="display: flex; justify-content: center; margin: 10px 0;" id="qr-container"></div>
-            <div class="address-box" id="deposit-addr">Загрузка адреса...</div>
+            <div class="address-box" id="deposit-addr-display">Загрузка адреса...</div>
             <button class="primary-btn" onclick="copyDepositAddress()">Скопировать адрес</button>
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION (5 TABS) -->
+    <!-- BOTTOM NAVIGATION -->
     <div class="nav-bar">
         <div class="nav-item active" onclick="switchTab('home', this)">
-            <span class="nav-icon">🏠</span>
+            <svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             <span>Главная</span>
         </div>
         <div class="nav-item" onclick="switchTab('history', this)">
-            <span class="nav-icon">📊</span>
+            <svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
             <span>История</span>
         </div>
-        <!-- Center Action Button -->
         <div class="nav-center-btn" onclick="openModal('deposit-modal')">
-            <span>📷</span>
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm13 0h3v3h-3v-3zm0 3h-3v3h3v-3z"/></svg>
         </div>
         <div class="nav-item" onclick="switchTab('cards', this)">
-            <span class="nav-icon">💳</span>
+            <svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
             <span>Карта</span>
         </div>
         <div class="nav-item" onclick="switchTab('menu', this)">
-            <span class="nav-icon">☰</span>
+            <svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             <span>Меню</span>
         </div>
     </div>
@@ -663,30 +658,180 @@
         const tg = window.Telegram ? window.Telegram.WebApp : null;
         if (tg) tg.expand();
 
-        let accountWallet = null;
+        let userAccount = { mnemonic: '', walletEVM: null };
+
+        // КОНФИГУРАЦИЯ ТОП-20 МОНЕТ И ИХ ВЕКТОРНЫХ ЛОГОТИПОВ
+        const top20Assets = [
+            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['TRC-20', 'BEP-20', 'ERC-20', 'TON', 'Solana'], price: 1.0, balance: 0.0 },
+            { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (Native SegWit)'], price: 65000.0, balance: 0.0 },
+            { id: 'ETH', name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism'], price: 3500.0, balance: 0.0 },
+            { id: 'TON', name: 'Toncoin', icon: 'https://cryptologos.cc/logos/toncoin-ton-logo.png', networks: ['TON Network'], price: 6.80, balance: 0.0 },
+            { id: 'BNB', name: 'BNB', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', networks: ['BEP-20 (BSC)'], price: 580.0, balance: 0.0 },
+            { id: 'SOL', name: 'Solana', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png', networks: ['Solana Network'], price: 145.0, balance: 0.0 },
+            { id: 'XRP', name: 'XRP', icon: 'https://cryptologos.cc/logos/xrp-xrp-logo.png', networks: ['XRP Ledger'], price: 0.55, balance: 0.0 },
+            { id: 'ADA', name: 'Cardano', icon: 'https://cryptologos.cc/logos/cardano-ada-logo.png', networks: ['Cardano Network'], price: 0.38, balance: 0.0 },
+            { id: 'DOGE', name: 'Dogecoin', icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png', networks: ['Dogecoin Chain'], price: 0.12, balance: 0.0 },
+            { id: 'TRX', name: 'TRON', icon: 'https://cryptologos.cc/logos/tron-trx-logo.png', networks: ['TRC-20'], price: 0.13, balance: 0.0 },
+            { id: 'AVAX', name: 'Avalanche', icon: 'https://cryptologos.cc/logos/avalanche-avax-logo.png', networks: ['AVAX C-Chain'], price: 28.0, balance: 0.0 },
+            { id: 'DOT', name: 'Polkadot', icon: 'https://cryptologos.cc/logos/polkadot-new-dot-logo.png', networks: ['Polkadot Relay'], price: 6.20, balance: 0.0 },
+            { id: 'MATIC', name: 'Polygon', icon: 'https://cryptologos.cc/logos/polygon-matic-logo.png', networks: ['Polygon POS'], price: 0.52, balance: 0.0 },
+            { id: 'LINK', name: 'Chainlink', icon: 'https://cryptologos.cc/logos/chainlink-link-logo.png', networks: ['ERC-20'], price: 14.0, balance: 0.0 },
+            { id: 'LTC', name: 'Litecoin', icon: 'https://cryptologos.cc/logos/litecoin-ltc-logo.png', networks: ['Litecoin Network'], price: 72.0, balance: 0.0 },
+            { id: 'SHIB', name: 'Shiba Inu', icon: 'https://cryptologos.cc/logos/shiba-inu-shib-logo.png', networks: ['ERC-20'], price: 0.000018, balance: 0.0 },
+            { id: 'NEAR', name: 'NEAR Protocol', icon: 'https://cryptologos.cc/logos/near-protocol-near-logo.png', networks: ['NEAR Network'], price: 5.10, balance: 0.0 },
+            { id: 'UNI', name: 'Uniswap', icon: 'https://cryptologos.cc/logos/uniswap-uni-logo.png', networks: ['ERC-20'], price: 8.0, balance: 0.0 },
+            { id: 'BCH', name: 'Bitcoin Cash', icon: 'https://cryptologos.cc/logos/bitcoin-cash-bch-logo.png', networks: ['Bitcoin Cash Chain'], price: 380.0, balance: 0.0 },
+            { id: 'PEPE', name: 'Pepe', icon: 'https://cryptologos.cc/logos/pepe-pepe-logo.png', networks: ['ERC-20'], price: 0.000009, balance: 0.0 }
+        ];
 
         window.onload = function() {
-            initMasterWallet();
-            calcExchange();
-            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                const u = tg.initDataUnsafe.user;
-                document.getElementById('header-username').innerText = '@' + (u.username || 'user');
-                document.getElementById('profile-name').innerText = u.first_name;
-                document.getElementById('profile-id').innerText = 'ID: ' + u.id;
-                document.getElementById('header-avatar-initials').innerText = u.first_name.substring(0, 2).toUpperCase();
-            }
+            initAccount();
+            renderAssetsList();
+            initSelects();
+            fetchPricesFromBybit();
+            setInterval(fetchPricesFromBybit, 15000);
         };
 
-        function initMasterWallet() {
-            let mnemonic = localStorage.getItem('aether_master_mnemonic');
-            if (!mnemonic) {
+        function initAccount() {
+            let savedMnemonic = localStorage.getItem('aether_master_mnemonic');
+            if (!savedMnemonic) {
                 const wallet = ethers.Wallet.createRandom();
-                mnemonic = wallet.mnemonic.phrase;
-                localStorage.setItem('aether_master_mnemonic', mnemonic);
+                savedMnemonic = wallet.mnemonic.phrase;
+                localStorage.setItem('aether_master_mnemonic', savedMnemonic);
             }
-            accountWallet = ethers.Wallet.fromMnemonic(mnemonic);
-            document.getElementById('deposit-addr').innerText = accountWallet.address;
-            document.getElementById('seed-words-text').innerText = mnemonic;
+
+            userAccount.mnemonic = savedMnemonic;
+            userAccount.walletEVM = ethers.Wallet.fromMnemonic(savedMnemonic);
+
+            const evmAddr = userAccount.walletEVM.address;
+            const tronAddr = "T" + evmAddr.substring(3, 35);
+            const tonAddr = "EQB" + evmAddr.substring(2, 40);
+
+            document.getElementById('addr-evm-display').innerText = evmAddr;
+            document.getElementById('addr-tron-display').innerText = tronAddr;
+            document.getElementById('addr-ton-display').innerText = tonAddr;
+            document.getElementById('seed-words-text').innerText = savedMnemonic;
+        }
+
+        async function fetchPricesFromBybit() {
+            try {
+                const res = await fetch('https://api.bybit.com/v5/market/tickers?category=spot');
+                const data = await res.json();
+                if(data.result && data.result.list) {
+                    const tickers = data.result.list;
+                    top20Assets.forEach(asset => {
+                        if(asset.id === 'USDT') return;
+                        const match = tickers.find(t => t.symbol === asset.id + 'USDT');
+                        if(match && match.lastPrice) {
+                            asset.price = parseFloat(match.lastPrice);
+                        }
+                    });
+                    renderAssetsList();
+                    recalcTotalBalance();
+                }
+            } catch(e) {}
+        }
+
+        function renderAssetsList() {
+            const container = document.getElementById('asset-list-container');
+            container.innerHTML = '';
+
+            top20Assets.forEach(asset => {
+                const fiatVal = (asset.balance * asset.price).toFixed(2);
+                const div = document.createElement('div');
+                div.className = 'asset-item';
+                div.onclick = () => openSendModalWithAsset(asset.id);
+                div.innerHTML = `
+                    <div class="asset-info">
+                        <img src="${asset.icon}" class="asset-icon-img" alt="${asset.id}" onerror="this.src='https://cryptologos.cc/logos/tether-usdt-logo.png'">
+                        <div>
+                            <div class="asset-name">${asset.name}</div>
+                            <div class="asset-symbol">$${asset.price.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div class="asset-val">
+                        <div class="asset-amount">${asset.balance.toFixed(4)} ${asset.id}</div>
+                        <div class="asset-fiat">$${fiatVal}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function recalcTotalBalance() {
+            let totalUsd = 0;
+            top20Assets.forEach(a => totalUsd += (a.balance * a.price));
+            document.getElementById('total-balance-usd').innerText = '$' + totalUsd.toFixed(2);
+            document.getElementById('total-balance-rub').innerText = '≈ ' + (totalUsd * 95.0).toFixed(2) + ' ₽';
+        }
+
+        function initSelects() {
+            const sendSelect = document.getElementById('send-asset-select');
+            const depSelect = document.getElementById('deposit-asset-select');
+            sendSelect.innerHTML = '';
+            depSelect.innerHTML = '';
+
+            top20Assets.forEach(asset => {
+                sendSelect.innerHTML += `<option value="${asset.id}">${asset.name} (${asset.id})</option>`;
+                depSelect.innerHTML += `<option value="${asset.id}">${asset.name} (${asset.id})</option>`;
+            });
+
+            onSendAssetChange();
+            updateDepositQR();
+        }
+
+        function onSendAssetChange() {
+            const selectedId = document.getElementById('send-asset-select').value;
+            const asset = top20Assets.find(a => a.id === selectedId);
+            const netSelect = document.getElementById('send-network-select');
+            netSelect.innerHTML = '';
+
+            if(asset) {
+                asset.networks.forEach(net => {
+                    netSelect.innerHTML += `<option value="${net}">${net}</option>`;
+                });
+            }
+        }
+
+        function openSendModalWithAsset(assetId) {
+            document.getElementById('send-asset-select').value = assetId;
+            onSendAssetChange();
+            openModal('send-modal');
+        }
+
+        function openSendModal() { openModal('send-modal'); }
+
+        function executeSendTransaction() {
+            const asset = document.getElementById('send-asset-select').value;
+            const net = document.getElementById('send-network-select').value;
+            const addr = document.getElementById('send-target-addr').value;
+            const amt = document.getElementById('send-target-amount').value;
+
+            if(!addr || !amt) return alert('Укажите адрес и сумму перевода!');
+            alert(`Транзакция отправки ${amt} ${asset} в сети ${net} сформирована!`);
+            closeModals();
+        }
+
+        function updateDepositQR() {
+            const qrc = document.getElementById('qr-container');
+            qrc.innerHTML = '';
+            
+            const addr = userAccount.walletEVM ? userAccount.walletEVM.address : '0x00';
+            document.getElementById('deposit-addr-display').innerText = addr;
+
+            new QRCode(qrc, {
+                text: addr,
+                width: 150,
+                height: 150,
+                colorDark: "#5B3C8C",
+                colorLight: "#FFFFFF"
+            });
+        }
+
+        function copyDepositAddress() {
+            const addr = document.getElementById('deposit-addr-display').innerText;
+            navigator.clipboard.writeText(addr);
+            alert('Адрес скопирован в буфер обмена!');
         }
 
         function switchTab(tabId, navEl) {
@@ -696,56 +841,15 @@
             if(navEl) navEl.classList.add('active');
         }
 
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-            if(modalId === 'deposit-modal') {
-                const qrc = document.getElementById('qr-container');
-                qrc.innerHTML = '';
-                new QRCode(qrc, {
-                    text: accountWallet.address,
-                    width: 150,
-                    height: 150,
-                    colorDark: "#5B3C8C",
-                    colorLight: "#FFFFFF"
-                });
-            }
-        }
-
-        function closeModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-        }
-
-        function copyDepositAddress() {
-            navigator.clipboard.writeText(accountWallet.address);
-            alert('Адрес скопирован в буфер обмена!');
-        }
-
-        function calcExchange() {
-            const val = parseFloat(document.getElementById('ex-from').value) || 0;
-            const from = document.getElementById('ex-curr-from').value;
-            if(from === 'RUB') {
-                document.getElementById('ex-to').value = (val / 95.0).toFixed(2);
-            } else {
-                document.getElementById('ex-to').value = (val * 95.0).toFixed(2);
-            }
-        }
-
-        function submitExchange() {
-            alert('Заявка на обмен сформирована и направлена в процессинг!');
-            closeModals();
-        }
-
-        function executeSend() {
-            const addr = document.getElementById('send-address').value;
-            const sum = document.getElementById('send-sum').value;
-            if(!addr || !sum) return alert('Заполните все поля!');
-            alert(`Транзакция на отправку ${sum} успешно инициирована!`);
-            closeModals();
-        }
-
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModals(e) { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
         function toggleSeed() {
             const box = document.getElementById('seed-box');
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+        function calcExchange() {
+            const val = parseFloat(document.getElementById('ex-from').value) || 0;
+            document.getElementById('ex-to').value = (val / 95.0).toFixed(2);
         }
     </script>
 </body>
