@@ -410,14 +410,30 @@
             font-size: 11px;
             color: var(--text-muted);
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 4px;
             padding: 0 4px;
+        }
+
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
         }
 
         .network-hint {
             font-size: 10px;
             color: var(--success);
             margin-top: 2px;
+            display: none;
+        }
+
+        .gas-warning {
+            font-size: 11px;
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
             display: none;
         }
     </style>
@@ -586,8 +602,18 @@
             </div>
 
             <div class="fee-info">
-                <span>Комиссия сети (Gas):</span>
-                <span id="estimated-fee">~0.00045 BNB (~$0.25)</span>
+                <div class="fee-row">
+                    <span>Баланс BNB (Газ):</span>
+                    <span id="bnb-gas-balance">0.0000 BNB</span>
+                </div>
+                <div class="fee-row">
+                    <span>Комиссия сети:</span>
+                    <span id="estimated-fee">~0.00045 BNB (~$0.25)</span>
+                </div>
+            </div>
+
+            <div id="gas-warning-box" class="gas-warning">
+                Для отправки токена требуется небольшое количество BNB на балансе для оплаты комиссии сети (Gas).
             </div>
 
             <button class="primary-btn" id="confirm-send-btn" onclick="executeSendTransaction()">Подтвердить перевод</button>
@@ -647,6 +673,7 @@
         let userAccount = { 
             mnemonic: '', 
             walletEVM: null,
+            bnbBalance: 0.0,
             addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } 
         };
 
@@ -745,6 +772,16 @@
         async function fetchOnChainBalances() {
             try {
                 const bscProvider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+                
+                // 1. Чтение нативного баланса BNB для комиссии (Gas)
+                const rawBnb = await bscProvider.getBalance(userAccount.addresses.EVM);
+                userAccount.bnbBalance = parseFloat(ethers.utils.formatEther(rawBnb));
+                
+                const bnbAsset = top20Assets.find(a => a.id === 'BNB');
+                if (bnbAsset) bnbAsset.balance = userAccount.bnbBalance;
+                document.getElementById('bnb-gas-balance').innerText = `${userAccount.bnbBalance.toFixed(4)} BNB`;
+
+                // 2. Чтение баланса токена USDT BEP-20
                 const usdtAddress = "0x55d398326f99059ff775485246999027b3197955";
                 const abi = ["function balanceOf(address owner) view returns (uint256)"];
                 const usdtContract = new ethers.Contract(usdtAddress, abi, bscProvider);
@@ -753,9 +790,8 @@
                 const formattedUsdt = parseFloat(ethers.utils.formatUnits(balanceWei, 18));
 
                 const usdtAsset = top20Assets.find(a => a.id === 'USDT');
-                if (usdtAsset) {
-                    usdtAsset.balance = formattedUsdt;
-                }
+                if (usdtAsset) usdtAsset.balance = formattedUsdt;
+
             } catch (e) {
                 console.log("RPC Balance Sync Error:", e);
             }
@@ -839,6 +875,14 @@
                     netSelect.innerHTML += `<option value="${net}">${net}</option>`;
                 });
             }
+
+            // Показываем предупреждение если BNB равен 0 для комиссии
+            const warningBox = document.getElementById('gas-warning-box');
+            if (userAccount.bnbBalance < 0.0003) {
+                warningBox.style.display = 'block';
+            } else {
+                warningBox.style.display = 'none';
+            }
         }
 
         function onDepositAssetChange() {
@@ -896,7 +940,7 @@
         async function executeSendTransaction() {
             const assetId = document.getElementById('send-asset-select').value;
             const network = document.getElementById('send-network-select').value;
-            const recipient = document.getElementById('send-target-addr').value;
+            const recipient = document.getElementById('send-target-addr').value.trim();
             const amount = document.getElementById('send-target-amount').value;
 
             if (!recipient || !amount) {
@@ -907,6 +951,12 @@
             const asset = top20Assets.find(a => a.id === assetId);
             if (parseFloat(amount) > asset.balance) {
                 alert('Недостаточно средств на балансе!');
+                return;
+            }
+
+            // ПРОВЕРКА НАЛИЧИЯ BNB ДЛЯ ОПЛАТЫ КОМИССИИ (GAS CHECK)
+            if (userAccount.bnbBalance < 0.0003) {
+                alert('Недостаточно BNB для оплаты комиссии сети (Gas)!\n\nДля перевода токенов BEP-20 необходимо пополнить кошелек небольшой суммой BNB (~$0.20).');
                 return;
             }
 
@@ -940,7 +990,11 @@
                 fetchOnChainBalances();
             } catch (err) {
                 console.error(err);
-                alert('Ошибка отправки: ' + (err.message || 'Недостаточно средств для оплаты комиссионного газа BNB'));
+                if (err.code === 'INSUFFICIENT_FUNDS' || (err.error && err.error.code === -32000)) {
+                    alert('Ошибка сети: Недостаточно BNB на балансе для покрытия комиссионного газа!');
+                } else {
+                    alert('Ошибка транзакции: ' + (err.reason || err.message || 'Сбой связи с блокчейном'));
+                }
             } finally {
                 btn.innerText = 'Подтвердить перевод';
                 btn.disabled = false;
@@ -963,6 +1017,7 @@
         function openModal(id) { 
             document.getElementById(id).style.display = 'flex'; 
             if(id === 'deposit-modal') onDepositAssetChange();
+            if(id === 'send-modal') onSendAssetChange();
         }
 
         function closeModals(e) { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
