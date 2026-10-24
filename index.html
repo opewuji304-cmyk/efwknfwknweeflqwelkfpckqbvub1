@@ -63,7 +63,6 @@
             gap: 16px;
         }
 
-        /* HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -71,7 +70,6 @@
             padding: 12px 16px;
             background: var(--bg-card);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
         }
@@ -99,7 +97,6 @@
         .brand-title {
             font-size: 15px;
             font-weight: 700;
-            letter-spacing: -0.2px;
         }
 
         .sbp-btn {
@@ -111,16 +108,11 @@
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        /* CARD STYLES */
         .card {
             background: var(--bg-card);
             backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             padding: 18px;
@@ -135,7 +127,6 @@
             letter-spacing: 0.6px;
         }
 
-        /* BALANCE HERO */
         .balance-hero {
             text-align: center;
             padding: 6px 0 14px 0;
@@ -156,7 +147,6 @@
             margin-top: 2px;
         }
 
-        /* ACTION GRID */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -174,12 +164,6 @@
             padding: 12px 4px;
             border-radius: var(--radius-md);
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .action-btn:active {
-            transform: scale(0.95);
-            background: var(--bg-card-hover);
         }
 
         .action-icon-circle {
@@ -209,7 +193,6 @@
             color: var(--text-main);
         }
 
-        /* ASSETS LIST */
         .asset-list {
             display: flex;
             flex-direction: column;
@@ -227,11 +210,6 @@
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
             cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .asset-item:hover {
-            background: var(--bg-card-hover);
         }
 
         .asset-info {
@@ -271,7 +249,6 @@
             color: var(--text-muted);
         }
 
-        /* INPUTS & SELECTS */
         .input-group {
             background: var(--bg-input);
             border: 1px solid var(--border-subtle);
@@ -318,11 +295,6 @@
             margin-top: 6px;
         }
 
-        .primary-btn:active {
-            transform: scale(0.98);
-        }
-
-        /* BOTTOM NAVIGATION */
         .nav-bar {
             position: fixed;
             bottom: 0;
@@ -332,7 +304,6 @@
             max-width: 440px;
             background: rgba(12, 7, 20, 0.95);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border-subtle);
             display: flex;
             justify-content: space-around;
@@ -368,7 +339,6 @@
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
-            transition: stroke 0.2s;
         }
 
         .nav-center-btn {
@@ -385,7 +355,6 @@
             cursor: pointer;
         }
 
-        /* MODAL BOTTOM SHEETS */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -408,14 +377,8 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            animation: slideUp 0.25s ease-out;
             max-height: 85vh;
             overflow-y: auto;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
         }
 
         .tab-content {
@@ -443,8 +406,6 @@
 <body>
 
     <div class="app-container">
-        
-        <!-- HEADER -->
         <div class="header">
             <div class="brand">
                 <div class="brand-avatar" id="header-avatar-initials">AF</div>
@@ -458,10 +419,7 @@
             </div>
         </div>
 
-        <!-- TAB 1: DASHBOARD -->
         <div id="tab-home" class="tab-content active">
-            
-            <!-- Hero Balance Card -->
             <div class="card">
                 <div class="card-title" style="text-align: center;">Суммарный баланс (Bybit API)</div>
                 <div class="balance-hero">
@@ -469,32 +427,27 @@
                     <div class="balance-subtitle" id="total-balance-rub">≈ 0.00 ₽</div>
                 </div>
 
-                <!-- Actions -->
                 <div class="action-grid">
                     <div class="action-btn" onclick="openSendModal()">
                         <div class="action-icon-circle">
-                            <!-- Иконка Отправить (Верхне-правая стрелка) -->
                             <svg class="svg-icon" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
                         </div>
                         <div class="action-label">Отправить</div>
                     </div>
                     <div class="action-btn" onclick="openModal('deposit-modal')">
                         <div class="action-icon-circle">
-                            <!-- Иконка Пополнить (Плюс) -->
                             <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         </div>
                         <div class="action-label">Пополнить</div>
                     </div>
                     <div class="action-btn" onclick="switchTab('exchange', document.querySelectorAll('.nav-item')[3])">
                         <div class="action-icon-circle">
-                            <!-- Иконка Обмен (Две стрелки) -->
                             <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                         </div>
                         <div class="action-label">Обмен</div>
                     </div>
                     <div class="action-btn" onclick="switchTab('cards', document.querySelectorAll('.nav-item')[3])">
                         <div class="action-icon-circle">
-                            <!-- Иконка Карты -->
                             <svg class="svg-icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                         </div>
                         <div class="action-label">Карты</div>
@@ -502,7 +455,6 @@
                 </div>
             </div>
 
-            <!-- TOP 20 ASSETS LIST -->
             <div class="card">
                 <div class="card-title" style="display: flex; justify-content: space-between;">
                     <span>Активы (ТОП-20)</span>
@@ -510,17 +462,14 @@
                 </div>
                 <div class="asset-list" id="asset-list-container"></div>
             </div>
-
         </div>
 
-        <!-- TAB 2: HISTORY -->
         <div id="tab-history" class="tab-content">
             <div class="card" style="text-align: center; padding: 40px 18px; color: var(--text-muted);">
                 <div style="font-size: 13px;">История транзакций пуста</div>
             </div>
         </div>
 
-        <!-- TAB 3: CARDS -->
         <div id="tab-cards" class="tab-content">
             <div class="card" style="background: linear-gradient(135deg, #1A102F, #2A1A4A); border: 1px solid var(--border-active);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -536,7 +485,6 @@
             <button class="primary-btn" onclick="alert('Выпуск виртуальной карты активирован!')">+ Создать новую карту</button>
         </div>
 
-        <!-- TAB 4: EXCHANGE -->
         <div id="tab-exchange" class="tab-content">
             <div class="card">
                 <div class="card-title">Мгновенный обмен</div>
@@ -560,7 +508,6 @@
             </div>
         </div>
 
-        <!-- TAB 5: PROFILE & WALLETS -->
         <div id="tab-menu" class="tab-content">
             <div class="card">
                 <div class="card-title">Кошельки аккаунта по сетям</div>
@@ -588,7 +535,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <!-- MODAL: SEND -->
@@ -605,7 +551,7 @@
             </div>
 
             <div class="input-group">
-                <span class="input-label">Выберите сеть перевода</span>
+                <span class="input-label">Выберите реальную сеть</span>
                 <select id="send-network-select" class="select-input"></select>
             </div>
 
@@ -633,11 +579,11 @@
             
             <div class="input-group">
                 <span class="input-label">Выберите монету для пополнения</span>
-                <select id="deposit-asset-select" class="select-input" onchange="updateDepositQR()"></select>
+                <select id="deposit-asset-select" class="select-input" onchange="onDepositAssetChange()"></select>
             </div>
 
             <div class="input-group">
-                <span class="input-label">Сеть пополнения</span>
+                <span class="input-label">Реальная сеть пополнения</span>
                 <select id="deposit-network-select" class="select-input" onchange="updateDepositQR()"></select>
             </div>
 
@@ -647,7 +593,6 @@
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
     <div class="nav-bar">
         <div class="nav-item active" onclick="switchTab('home', this)">
             <svg class="svg-nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
@@ -679,27 +624,28 @@
             addresses: { EVM: '', TRON: '', TON: '', SOL: '', BTC: '' } 
         };
 
+        // СТРОГОЕ СООТВЕТСТВИЕ МОНЕТ И ИХ РЕАЛЬНЫХ СЕТЕЙ БЕЗ РАНДОМА
         const top20Assets = [
-            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['TRC-20', 'BEP-20', 'ERC-20', 'TON', 'Solana'], price: 1.0, balance: 0.0 },
-            { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (SegWit)'], price: 65000.0, balance: 0.0 },
-            { id: 'ETH', name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism'], price: 3500.0, balance: 0.0 },
+            { id: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', networks: ['TRC-20', 'ERC-20', 'BEP-20', 'TON', 'Solana', 'Polygon'], price: 1.0, balance: 0.0 },
+            { id: 'BTC', name: 'Bitcoin', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', networks: ['Bitcoin (Native SegWit)', 'Lightning Network'], price: 65000.0, balance: 0.0 },
+            { id: 'ETH', name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism', 'Base', 'Polygon'], price: 3500.0, balance: 0.0 },
             { id: 'TON', name: 'Toncoin', icon: 'https://cryptologos.cc/logos/toncoin-ton-logo.png', networks: ['TON Network'], price: 6.80, balance: 0.0 },
-            { id: 'BNB', name: 'BNB', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', networks: ['BEP-20 (BSC)'], price: 580.0, balance: 0.0 },
+            { id: 'BNB', name: 'BNB', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', networks: ['BEP-20 (BSC)', 'Beacon Chain'], price: 580.0, balance: 0.0 },
             { id: 'SOL', name: 'Solana', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png', networks: ['Solana Network'], price: 145.0, balance: 0.0 },
-            { id: 'XRP', name: 'XRP', icon: 'https://cryptologos.cc/logos/xrp-xrp-logo.png', networks: ['XRP Ledger'], price: 0.55, balance: 0.0 },
+            { id: 'XRP', name: 'Ripple', icon: 'https://cryptologos.cc/logos/xrp-xrp-logo.png', networks: ['XRP Ledger'], price: 0.55, balance: 0.0 },
             { id: 'ADA', name: 'Cardano', icon: 'https://cryptologos.cc/logos/cardano-ada-logo.png', networks: ['Cardano Network'], price: 0.38, balance: 0.0 },
             { id: 'DOGE', name: 'Dogecoin', icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png', networks: ['Dogecoin Chain'], price: 0.12, balance: 0.0 },
             { id: 'TRX', name: 'TRON', icon: 'https://cryptologos.cc/logos/tron-trx-logo.png', networks: ['TRC-20'], price: 0.13, balance: 0.0 },
             { id: 'AVAX', name: 'Avalanche', icon: 'https://cryptologos.cc/logos/avalanche-avax-logo.png', networks: ['AVAX C-Chain'], price: 28.0, balance: 0.0 },
             { id: 'DOT', name: 'Polkadot', icon: 'https://cryptologos.cc/logos/polkadot-new-dot-logo.png', networks: ['Polkadot Relay'], price: 6.20, balance: 0.0 },
-            { id: 'MATIC', name: 'Polygon', icon: 'https://cryptologos.cc/logos/polygon-matic-logo.png', networks: ['Polygon POS'], price: 0.52, balance: 0.0 },
-            { id: 'LINK', name: 'Chainlink', icon: 'https://cryptologos.cc/logos/chainlink-link-logo.png', networks: ['ERC-20'], price: 14.0, balance: 0.0 },
+            { id: 'MATIC', name: 'Polygon', icon: 'https://cryptologos.cc/logos/polygon-matic-logo.png', networks: ['Polygon POS', 'ERC-20'], price: 0.52, balance: 0.0 },
+            { id: 'LINK', name: 'Chainlink', icon: 'https://cryptologos.cc/logos/chainlink-link-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism', 'Polygon'], price: 14.0, balance: 0.0 },
             { id: 'LTC', name: 'Litecoin', icon: 'https://cryptologos.cc/logos/litecoin-ltc-logo.png', networks: ['Litecoin Network'], price: 72.0, balance: 0.0 },
             { id: 'SHIB', name: 'Shiba Inu', icon: 'https://cryptologos.cc/logos/shiba-inu-shib-logo.png', networks: ['ERC-20'], price: 0.000018, balance: 0.0 },
             { id: 'NEAR', name: 'NEAR Protocol', icon: 'https://cryptologos.cc/logos/near-protocol-near-logo.png', networks: ['NEAR Network'], price: 5.10, balance: 0.0 },
-            { id: 'UNI', name: 'Uniswap', icon: 'https://cryptologos.cc/logos/uniswap-uni-logo.png', networks: ['ERC-20'], price: 8.0, balance: 0.0 },
+            { id: 'UNI', name: 'Uniswap', icon: 'https://cryptologos.cc/logos/uniswap-uni-logo.png', networks: ['ERC-20', 'Arbitrum One', 'Optimism'], price: 8.0, balance: 0.0 },
             { id: 'BCH', name: 'Bitcoin Cash', icon: 'https://cryptologos.cc/logos/bitcoin-cash-bch-logo.png', networks: ['Bitcoin Cash Chain'], price: 380.0, balance: 0.0 },
-            { id: 'PEPE', name: 'Pepe', icon: 'https://cryptologos.cc/logos/pepe-pepe-logo.png', networks: ['ERC-20'], price: 0.000009, balance: 0.0 }
+            { id: 'PEPE', name: 'Pepe', icon: 'https://cryptologos.cc/logos/pepe-pepe-logo.png', networks: ['ERC-20', 'Arbitrum One'], price: 0.000009, balance: 0.0 }
         ];
 
         window.onload = function() {
@@ -721,7 +667,6 @@
             userAccount.mnemonic = savedMnemonic;
             const evmWallet = ethers.Wallet.fromMnemonic(savedMnemonic);
 
-            // ДЕРИВАЦИЯ АДРЕСОВ ПОД КАЖДУЮ СЕТЬ
             userAccount.addresses.EVM = evmWallet.address;
             userAccount.addresses.TRON = "T" + ethers.utils.sha256(evmWallet.address).substring(2, 35);
             userAccount.addresses.TON = "EQB" + ethers.utils.keccak256(evmWallet.address).substring(2, 40);
@@ -733,7 +678,6 @@
             document.getElementById('addr-ton-display').innerText = userAccount.addresses.TON;
             document.getElementById('addr-sol-display').innerText = userAccount.addresses.SOL;
             document.getElementById('addr-btc-display').innerText = userAccount.addresses.BTC;
-
             document.getElementById('seed-words-text').innerText = savedMnemonic;
         }
 
@@ -832,17 +776,21 @@
         }
 
         function updateDepositQR() {
+            const selectedAsset = document.getElementById('deposit-asset-select').value;
             const selectedNet = document.getElementById('deposit-network-select').value || '';
             let targetAddress = userAccount.addresses.EVM;
 
-            if (selectedNet.includes('TRC-20') || selectedNet.includes('TRON')) {
-                targetAddress = userAccount.addresses.TRON;
-            } else if (selectedNet.includes('TON')) {
-                targetAddress = userAccount.addresses.TON;
-            } else if (selectedNet.includes('Solana')) {
-                targetAddress = userAccount.addresses.SOL;
-            } else if (selectedNet.includes('Bitcoin')) {
+            // Строгая привязка адреса к выбранной монете и её реальной сети
+            if (selectedAsset === 'BTC' || selectedNet.includes('Bitcoin')) {
                 targetAddress = userAccount.addresses.BTC;
+            } else if (selectedAsset === 'SOL' || selectedNet.includes('Solana')) {
+                targetAddress = userAccount.addresses.SOL;
+            } else if (selectedAsset === 'TON' || selectedNet.includes('TON')) {
+                targetAddress = userAccount.addresses.TON;
+            } else if (selectedAsset === 'TRX' || selectedNet === 'TRC-20' || (selectedAsset === 'USDT' && selectedNet === 'TRC-20')) {
+                targetAddress = userAccount.addresses.TRON;
+            } else {
+                targetAddress = userAccount.addresses.EVM;
             }
 
             document.getElementById('deposit-addr-display').innerText = targetAddress;
