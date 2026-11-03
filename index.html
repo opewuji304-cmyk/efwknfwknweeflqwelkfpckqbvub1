@@ -219,10 +219,30 @@ const ERC=['function balanceOf(address) view returns (uint256)','function transf
 const H=[],P={USDT:1,USDC:1},PR={};
 for(const n in NETS){H.push({net:n,sym:NETS[n].nat,tok:null,dec:n==='TRX'?6:18,bal:null});TOK[n].forEach(([s,a,d])=>H.push({net:n,sym:s,tok:a,dec:d,bal:null}))}
 const prov=n=>PR[n]||(PR[n]=CFG.RPC[n]?new ethers.providers.StaticJsonRpcProvider(CFG.RPC[n],NETS[n].id):new ethers.providers.FallbackProvider(NETS[n].rpc.map((url,i)=>({provider:new ethers.providers.StaticJsonRpcProvider(url,NETS[n].id),priority:i+1,weight:1,stallTimeout:1500}))));
-const S={hist:[],hLoaded:false,walletLockTimer:null};
+const S={hist:[],hLoaded:false,walletLockTimer:null,apiToken:'',apiTokenExpiry:0,apiSessionPromise:null};
 const coin=h=>`<div class="co"><i>${h.sym[0]}</i><img src="https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ICO[h.sym]}.svg" onerror="this.remove()"><span class="nb ${h.net}">${h.net[0]}</span></div>`;
 
 const tmo=(p,ms=8000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('таймаут')),ms))]);
+async function apiAuthHeaders(){
+  if(S.apiToken&&S.apiTokenExpiry>Date.now()/1000+60)return {Authorization:'Bearer '+S.apiToken};
+  if(S.apiSessionPromise)return S.apiSessionPromise;
+  if(!tg||!tg.initData)throw new Error('Откройте приложение из Telegram для серверной сессии.');
+  S.apiSessionPromise=(async()=>{
+    const r=await tmo(fetch(CFG.BACKEND_API.replace(/\/$/,'')+'/v1/session',{method:'POST',headers:{'Authorization':'tma '+tg.initData}}));
+    const j=await r.json();if(!r.ok||!j.token)throw new Error(j.detail||'Не удалось проверить Telegram-сессию.');
+    S.apiToken=j.token;S.apiTokenExpiry=Number(j.expires_at);return {Authorization:'Bearer '+S.apiToken};
+  })();
+  try{return await S.apiSessionPromise}finally{S.apiSessionPromise=null}
+}
+async function apiFetch(path,options={}){
+  for(let attempt=0;attempt<2;attempt++){
+    const auth=await apiAuthHeaders(),headers={...(options.headers||{}),...auth};
+    const r=await tmo(fetch(CFG.BACKEND_API.replace(/\/$/,'')+path,{...options,headers}));
+    if(r.status===401&&attempt===0){S.apiToken='';S.apiTokenExpiry=0;continue}
+    return r;
+  }
+  throw new Error('Серверная сессия завершилась. Переоткройте кошелёк из Telegram.');
+}
 async function rpc(n,m,p){
   let err;
   for(const u of [CFG.RPC[n],...NETS[n].rpc].filter(Boolean)){
@@ -234,8 +254,7 @@ async function rpc(n,m,p){
 const TH=['https://api.trongrid.io'];
 async function tron(path,body){
   if(CFG.BACKEND_API){
-    if(!tg||!tg.initData)throw new Error('Откройте кошелёк из Telegram для подключения к TRON Mainnet.');
-    const r=await tmo(fetch(CFG.BACKEND_API.replace(/\/$/,'')+'/v1/tron/rpc',{method:'POST',headers:{'content-type':'application/json','Authorization':'tma '+tg.initData},body:JSON.stringify({method:body?'POST':'GET',path,body:body||null})}));
+    const r=await apiFetch('/v1/tron/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({method:body?'POST':'GET',path,body:body||null})});
     const j=await r.json();if(!r.ok||j.Error||j.error||j.detail)throw new Error(j.detail||j.Error||j.error||`HTTP ${r.status}`);return j;
   }
   let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(async r=>{const j=await r.json();if(!r.ok||j.Error||j.error)throw new Error(j.Error||j.error||`HTTP ${r.status}`);return j}))}catch(e){err=e}}throw err
@@ -596,7 +615,7 @@ function lockWallet(){
 }
 async function registerWalletAddresses(){
   if(!CFG.BACKEND_API||!tg||!tg.initData)return;
-  try{const r=await fetch(CFG.BACKEND_API.replace(/\/$/,'')+'/v1/wallet/addresses',{method:'PUT',headers:{'content-type':'application/json','Authorization':'tma '+tg.initData},body:JSON.stringify({addresses:{BSC:S.evm,ETH:S.evm,POL:S.evm,ARB:S.evm,TRX:S.tron}})});
+  try{const r=await apiFetch('/v1/wallet/addresses',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({addresses:{BSC:S.evm,ETH:S.evm,POL:S.evm,ARB:S.evm,TRX:S.tron}})});
     if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!j.saved)throw new Error('address registry rejected request');
   }catch(e){console.warn('Public address registry unavailable:',e.message)}
 }
@@ -627,12 +646,13 @@ function openModal(id){hap();closeModals();$(id).classList.add('active');if(id==
 function closeModals(){document.querySelectorAll('.mo').forEach(m=>m.classList.remove('active'))}
 
 window.onload=async()=>{
+  const apiSession=CFG.BACKEND_API&&tg&&tg.initData?apiAuthHeaders().catch(e=>{console.warn('API session unavailable:',e.message);return null}):null;
   await initAccount();
   $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');$('d-net').value='TRX';
   const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).filter(Boolean).join('');
   $('w-from').innerHTML=ev;$('b-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
   $('w-tn').innerHTML=Object.keys(NETS).filter(n=>n!=='TRX').map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');fillTo();
-  render();renderHist();syncAll();kycUi();bkUi();registerWalletAddresses();
+  render();renderHist();syncAll();kycUi();bkUi();if(apiSession)await apiSession;registerWalletAddresses();
   if(!localStorage.getItem('aether_bk_'+S.uid)&&!localStorage.getItem('aether_backup_prompted_'+S.uid))setTimeout(()=>openModal('backup-nudge'),700);
   setInterval(syncAll,20000);document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){clearTimeout(S.walletLockTimer);S.walletLockTimer=null;syncAll()}
