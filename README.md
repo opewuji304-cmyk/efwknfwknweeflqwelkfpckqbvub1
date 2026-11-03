@@ -1,27 +1,36 @@
 # Aether Wallet
 
-Проект движется к кастодиальному внутреннему балансу в USD₮ — модели, соответствующей запросу на один счёт и комиссию в стейблкоине. Текущий `index.html` остаётся прежним on-chain прототипом и пока не подключён к новому API.
+Aether is being prepared as a **self-custody Telegram Mini App**. Seed phrases and signing keys are created and used in the browser. The API stores only public addresses linked to a server-verified Telegram user. Do not use this sandbox with real funds.
 
-Добавлен backend sandbox на FastAPI/PostgreSQL: серверная проверка Telegram `initData`, баланс ledger в микродолях USD₮, HMAC-подписанные тестовые зачисления, idempotency и fail-closed production gate. Выводы, реальный мониторинг депозитов, хранение/подписание ключей, KYC/AML, on/off-ramp и кроссчейн-маршруты намеренно выключены до правовой и технической интеграции.
+## Implemented in this sandbox
 
-## Локальная разработка
+- Encrypted browser wallet storage using Web Crypto AES-GCM and PBKDF2; the seed is no longer written to plaintext `localStorage`.
+- First-session backup reminder with **Now** and **Later** actions, a backup page, encrypted export/import, and a local user-confirmed backup status.
+- Server API validates Telegram `initData` and stores one public address per supported network (`BSC`, `ETH`, `POL`, `ARB`, `TRX`) in SQLite/PostgreSQL. It never accepts a seed or private key.
+- Existing client supports direct receive/send for the listed EVM networks and TRON; LI.FI quotes and client-side EVM execution are present in the prototype.
+- Production startup stays blocked pending independent wallet/security review, chain integration review, load test, and operational readiness.
 
-Нужны Docker Compose и Telegram bot token для локальных запросов:
+The xRocket Exchange and Pay APIs operate on an xRocket account or application balance. They do not provide per-user seed phrases for this wallet. They are not used to custody or sign Aether user transactions. xRocket-based invoicing or swaps would be a separate custodial product flow and is intentionally not wired into this self-custody wallet.
+
+## Local development
 
 ```sh
 cp .env.example .env
-# Задайте POSTGRES_PASSWORD и TELEGRAM_BOT_TOKEN в .env
+# Set POSTGRES_PASSWORD and TELEGRAM_BOT_TOKEN for the API.
 docker compose up --build
 ```
 
-API доступен локально на `http://127.0.0.1:8000`; документация разработчика — `/docs`. Тесты без Docker:
+Set `APP_ORIGINS` to the exact HTTPS origin hosting the Mini App and `BACKEND_API` in `index.html` to the API origin. The browser sends Telegram `initData` only to the backend for signature verification; it does not send the seed or private keys.
+
+The backend is available on `http://127.0.0.1:8000`. Local tests:
 
 ```sh
 pip install -r requirements-dev.txt
 python3 -m unittest discover -s tests -v
 ```
 
-Локальный bootstrap использует SQLite; compose поднимает PostgreSQL. Оба режима — только sandbox. Никакие реальные депозиты/выводы не поддерживаются.
+## Not production-ready
 
-Подробнее: [архитектура, правовые ограничения РФ и блокеры production](ARCHITECTURE.md), [аудит исходного клиента](AUDIT.md).
-Условия интеграции эквайринга: [ACQUIRER_INTEGRATION.md](ACQUIRER_INTEGRATION.md).
+No mainnet/testnet end-to-end run, independent audit, supported-network completeness review, KYC/on-ramp, 10,000-user load test, or deployment has been completed. The key storage still depends on an HTML app loading JavaScript from third-party CDNs; this needs a hardened asset supply chain and a browser threat review before real funds. Network fees are paid in each network's native token. xRocket API availability does not create gas sponsorship or cross-chain routes for these user-controlled wallets.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md), [AUDIT.md](AUDIT.md), and [ACQUIRER_INTEGRATION.md](ACQUIRER_INTEGRATION.md).

@@ -15,6 +15,7 @@ from typing import Any
 from urllib.parse import parse_qsl
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +25,7 @@ class Settings:
     database_url: str = "sqlite:///./aether-sandbox.db"
     telegram_bot_token: str = ""
     telegram_auth_max_age_seconds: int = 300
+    app_origins: tuple[str, ...] = ()
     deposit_webhook_secret: str = ""
     acquirer_webhook_secret: str = ""
     dev_credit_token: str = ""
@@ -47,6 +49,7 @@ class Settings:
             database_url=os.getenv("DATABASE_URL", "sqlite:///./aether-sandbox.db"),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
             telegram_auth_max_age_seconds=int(os.getenv("TELEGRAM_AUTH_MAX_AGE_SECONDS", "300")),
+            app_origins=tuple(origin.strip() for origin in os.getenv("APP_ORIGINS", "").split(",") if origin.strip()),
             deposit_webhook_secret=os.getenv("DEPOSIT_WEBHOOK_SECRET", ""),
             acquirer_webhook_secret=os.getenv("ACQUIRER_WEBHOOK_SECRET", ""),
             dev_credit_token=os.getenv("DEV_CREDIT_TOKEN", ""),
@@ -67,26 +70,20 @@ class Settings:
     def production_gaps(self) -> list[str]:
         required = {
             "TELEGRAM_BOT_TOKEN": self.telegram_bot_token,
+            "APP_ORIGINS": self.app_origins,
             "DATA_REGION=ru": self.data_region.lower() == "ru",
             "REGULATORY_APPROVED=1": self.regulatory_approved,
-            "CUSTODY_PROVIDER": self.custody_provider,
-            "CHAIN_PROVIDER": self.chain_provider,
-            "SCREENING_PROVIDER": self.screening_provider,
-            "KYC_AML_PROVIDER": self.kyc_aml_provider,
-            "ONRAMP_PROVIDER": self.onramp_provider,
-            "ACQUIRER_PROVIDER": self.acquirer_provider,
-            "PAYOUT_PROVIDER": self.payout_provider,
-            "KMS_KEY_REFERENCE": self.kms_key_reference,
-            "DEPOSIT_WEBHOOK_SECRET": self.deposit_webhook_secret,
-            "ACQUIRER_WEBHOOK_SECRET": self.acquirer_webhook_secret,
         }
         gaps = [name for name, value in required.items() if not value]
         if not self.database_url.startswith(("postgresql://", "postgres://")):
             gaps.append("PostgreSQL DATABASE_URL")
-        # Provider names in environment are configuration labels only. The actual custody,
-        # chain-indexing, screening, KYC and payout adapters have not been security-reviewed
-        # or integrated in this repository, so production must remain impossible to start.
-        gaps.append("audited production provider adapters (not implemented)")
+        # This app is transitioning to self-custody. Never treat environment flags as proof
+        # that browser key handling, chain routing, or production operations were reviewed.
+        gaps.extend([
+            "independent self-custody key-management and frontend security review",
+            "mainnet transaction/bridge integration review and recovery drill",
+            "10,000-user load test, rate limits, and production runbooks",
+        ])
         return gaps
 
 
@@ -128,6 +125,14 @@ def init_db(settings: Settings) -> None:
             CREATE TABLE IF NOT EXISTS users (
               telegram_id TEXT PRIMARY KEY,
               created_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS wallet_addresses (
+              telegram_id TEXT NOT NULL REFERENCES users(telegram_id),
+              network TEXT NOT NULL,
+              address TEXT NOT NULL,
+              updated_at INTEGER NOT NULL,
+              PRIMARY KEY(telegram_id, network),
+              UNIQUE(network, address)
             );
             CREATE TABLE IF NOT EXISTS ledger_transactions (
               id TEXT PRIMARY KEY,
@@ -183,6 +188,14 @@ def init_db(settings: Settings) -> None:
             schema = """
             CREATE TABLE IF NOT EXISTS users (
               telegram_id TEXT PRIMARY KEY, created_at BIGINT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS wallet_addresses (
+              telegram_id TEXT NOT NULL REFERENCES users(telegram_id),
+              network TEXT NOT NULL,
+              address TEXT NOT NULL,
+              updated_at BIGINT NOT NULL,
+              PRIMARY KEY(telegram_id, network),
+              UNIQUE(network, address)
             );
             CREATE TABLE IF NOT EXISTS ledger_transactions (
               id TEXT PRIMARY KEY, kind TEXT NOT NULL,
@@ -259,6 +272,21 @@ def validate_telegram_init_data(init_data: str, bot_token: str, max_age: int, no
 
 def account_ref(user_id: str) -> str:
     return f"user:{user_id}:USDT"
+
+
+def valid_tron_address(address: str) -> bool:
+    alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    if not re.fullmatch(r"T[1-9A-HJ-NP-Za-km-z]{33}", address):
+        return False
+    value = 0
+    for char in address:
+        value = value * 58 + alphabet.index(char)
+    decoded = value.to_bytes((value.bit_length() + 7) // 8, "big")
+    decoded = b"\x00" * (len(address) - len(address.lstrip("1"))) + decoded
+    if len(decoded) != 25 or decoded[0] != 0x41:
+        return False
+    checksum = hashlib.sha256(hashlib.sha256(decoded[:21]).digest()).digest()[:4]
+    return hmac.compare_digest(decoded[21:], checksum)
 
 
 def add_audit(conn, event: str, user_id: str, reference: str) -> None:
@@ -397,6 +425,10 @@ class PurchaseCreate(BaseModel):
     amount_rub_minor: int = Field(ge=10_000, le=100_000_000)
 
 
+class WalletAddressSet(BaseModel):
+    addresses: dict[str, str]
+
+
 class AcquirerEvent(BaseModel):
     event_id: str = Field(min_length=8, max_length=128)
     purchase_id: str = Field(min_length=16, max_length=64)
@@ -418,6 +450,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="Aether Wallet API", version="0.1.0", docs_url=None if config.app_env == "production" else "/docs", lifespan=lifespan)
+    if config.app_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(config.app_origins),
+            allow_credentials=False,
+            allow_methods=["GET", "PUT", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
 
     def authenticated_user(authorization: str | None = Header(default=None)) -> dict[str, str]:
         if not authorization or not authorization.startswith("tma "):
@@ -437,6 +477,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         amount = balance(config, user["id"])
         return {"asset": "USDT", "balance_minor": amount, "decimals": 6,
                 "display_balance": f"{amount // 1_000_000}.{amount % 1_000_000:06d}"}
+
+    @app.get("/v1/wallet/addresses")
+    def get_wallet_addresses(user: dict[str, str] = Depends(authenticated_user)) -> dict[str, Any]:
+        conn = connect(config)
+        try:
+            rows = execute(conn, "SELECT network,address FROM wallet_addresses WHERE telegram_id=? ORDER BY network",
+                           (user["id"],)).fetchall()
+            return {"addresses": {row["network"]: row["address"] for row in rows}}
+        finally:
+            conn.close()
+
+    @app.put("/v1/wallet/addresses")
+    def save_wallet_addresses(payload: WalletAddressSet, user: dict[str, str] = Depends(authenticated_user)) -> dict[str, Any]:
+        networks = {"BSC", "ETH", "POL", "ARB", "TRX"}
+        if set(payload.addresses) != networks:
+            raise HTTPException(status_code=422, detail="Addresses for all configured networks are required")
+        evm_addresses = {payload.addresses[n] for n in ("BSC", "ETH", "POL", "ARB")}
+        if len(evm_addresses) != 1:
+            raise HTTPException(status_code=422, detail="EVM networks must share the same wallet address")
+        evm = next(iter(evm_addresses))
+        tron = payload.addresses["TRX"]
+        if not re.fullmatch(r"0x[0-9a-fA-F]{40}", evm):
+            raise HTTPException(status_code=422, detail="Invalid EVM address")
+        if not valid_tron_address(tron):
+            raise HTTPException(status_code=422, detail="Invalid TRON address")
+        conn = connect(config)
+        try:
+            execute(conn, "INSERT INTO users(telegram_id,created_at) VALUES(?,?) ON CONFLICT(telegram_id) DO NOTHING",
+                    (user["id"], int(time.time())))
+            for network, address in payload.addresses.items():
+                execute(conn, "INSERT INTO wallet_addresses(telegram_id,network,address,updated_at) VALUES(?,?,?,?) "
+                              "ON CONFLICT(telegram_id,network) DO UPDATE SET address=excluded.address,updated_at=excluded.updated_at",
+                        (user["id"], network, address, int(time.time())))
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+                raise HTTPException(status_code=409, detail="Address is already linked to another account") from exc
+            raise
+        finally:
+            conn.close()
+        return {"saved": True, "networks": sorted(networks)}
 
     @app.post("/v1/purchases")
     def create_purchase(payload: PurchaseCreate, user: dict[str, str] = Depends(authenticated_user),
@@ -521,3 +603,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 
 app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1" if os.getenv("APP_ENV", "development") != "production" else "0.0.0.0",
+                port=int(os.getenv("PORT", "8000")))

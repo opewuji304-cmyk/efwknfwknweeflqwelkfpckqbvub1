@@ -1,60 +1,31 @@
-# Архитектура Aether Wallet и production-блокеры
+# Aether Wallet architecture
 
-Дата оценки рынка РФ: 24 октября 2026 года. Документ описывает выбранную целевую модель и готовый локальный sandbox; он не является юридическим заключением или разрешением на запуск.
+## Product model
 
-## Выбранная модель
+The target is **self-custody**. A user's mnemonic/private key is generated and used in that user's browser. The server never receives the mnemonic, private key, encrypted backup, or a signing request. The backend verifies Telegram Mini App `initData` and stores public address mappings only.
 
-**Кастодиальный внутренний ledger в USD₮.** Так можно показать один внутренний баланс и брать комиссию в USD₮, а на выводе конвертировать/маршрутизировать актив в выбранную сеть. Это не тот же продукт, что self-custody кошелёк: ключи и контроль транзакций должны находиться в серверном/HSM/MPC контуре или у квалифицированного кастодиана. У пользователя будет требование к оператору вернуть средства, поэтому нужны юридическое лицо, договоры и процедуры восстановления/споров.
+## Current implementation
 
-## Что реализовано локально
+- The Mini App generates a mnemonic locally. It encrypts it in browser storage with AES-GCM; the wrapping key is derived from a device password with PBKDF2. Unlock is required on each new page session.
+- An onboarding modal offers **Now** and **Later** for backup. **Now** opens the backup page. The page exports/imports a password-encrypted file and can show the recovery phrase. Backup completion is a local user confirmation, not something the server can verify.
+- The address registry endpoint `GET/PUT /v1/wallet/addresses` requires recent signed Telegram `initData`; it stores public EVM and TRON addresses in a DB row keyed by Telegram ID and network. EVM networks share one address. No secret material is sent.
+- EVM and TRON direct transfers are signed in the browser. LI.FI provides EVM quote/route data; the browser signs the returned EVM transaction. The supported lists in `index.html` define the current network/asset scope.
+- The former custodial ledger and sandbox payment endpoints remain disabled for production. They do not represent user funds and must not be mixed with the self-custody balances.
 
-- `backend/app.py` — FastAPI API, короткий срок жизни Telegram `initData`, проверка HMAC-SHA-256 серверным bot token, получение баланса, sandbox credit route, проверка HMAC webhook, идемпотентная запись депозита, запрет вывода без провайдеров.
-- Добавлен sandbox RUB purchase intent и нормализованный HMAC callback эквайера. Кредит появляется только для ранее созданного invoice, при совпадающей оплаченной RUB-сумме и успешной settlement-проводке. `checkout_url` пустой, потому что API конкретного эквайера не предоставлен.
-- Ledger хранит целые микродоли USD₮ (6 знаков), не `float`; каждая проводка должна быть ненулевой, а сумма записей одной транзакции должна быть равна нулю. Повтор события с тем же ключом идемпотентности не создаёт новую проводку.
-- SQLite — только быстрый локальный режим тестов. Compose описывает локальный PostgreSQL и API; Postgres adapter/DDL включены в код.
-- Production startup намеренно невозможен: код всегда сообщает, что аудитированные provider adapters ещё не реализованы. Заполнения переменных среды недостаточно для включения mainnet.
-- `tests/test_backend.py` проверяет валидную/поддельную/просроченную подпись Telegram, авторизацию, защищённое тестовое зачисление, дубликаты webhook и fail-closed вывод.
+## xRocket integration boundary
 
-Текущая `index.html` не переведена на custodial API. В ней остался прежний клиентский self-custody код с seed-фразой в незашифрованном `localStorage`; пока frontend migration не выполнена, клиент не соответствует выбранной модели. Не используйте с реальными средствами.
+xRocket Exchange API is for an xRocket user's exchange account: market data, orders, funding/trading balances, transfers, and withdrawals. Its private bearer token grants control over that xRocket account. xRocket Pay API is for an application balance: invoices, swaps against that balance, payouts, withdrawals, and signed webhooks. These APIs do not issue an Aether user's seed phrase or turn an xRocket application balance into a self-custody wallet. Connecting a single xRocket app token to user send/swap buttons would change the product into a custodial service, so this build does not do that.
 
-## Потоки, которые ещё требуется реализовать
+If xRocket is used later, it should be an explicitly separate, opt-in payment or exchange workflow with a provider account, legally reviewed terms, server-side secrets, signed webhook verification, idempotency, reconciliation, and user-visible disclosure. The Pay API's request limits and callback delivery semantics must be handled by shared caches/queues and a durable event store.
 
-1. **Идентификация и профиль:** получать только подписанный `initData`, не доверять `initDataUnsafe`; связать Telegram ID с KYC-case и статусом риска. Настроить rate limits, анти-replay и контроль сессии.
-2. **Адреса/депозиты:** выдавать депозитный адрес через кастодиана/контракт; сохранять привязку адрес → network/token → account в БД. Слушатель узлов/indexer проверяет контракт токена, сумму, финальность, chain reorg и санкционный риск. Только после внутренней проверки кредитовать ledger. Сейчас такого watcher/address registry нет; dev webhook принимает Telegram ID и сумму из подписанного тестового события и не должен использоваться на production.
-3. **Котировка вывода:** агрегатор маршрутов возвращает ожидаемый output, сетевой fee, комиссию сервиса, срок действия и ограничения. API фиксирует quote ID, курс, gross/net, сеть/контракт, получателя, источник ликвидности, лимиты и expiry. При изменении любой величины требуется новое подтверждение пользователя.
-4. **Резерв и исполнение:** в одной DB-транзакции проверить доступный баланс и лимиты, записать сбалансированные проводки и создать withdrawal intent. Transactional outbox отправляет задачу подписанному custody/KMS/MPC адаптеру; worker исполняет только после policy/KYC/sanctions checks, лимитов и повторной проверки адреса.
-5. **Расчёт:** отдельный watcher подтверждает on-chain settlement; статус меняется через конечный автомат (`quoted → reserved → submitted → confirmed` или `failed → refunded`). Уникальные ключи защищают и API-запрос, и каждое provider-событие. Возврат резерва также является сбалансированным ledger transaction.
-6. **Риски и операции:** KYC/AML-провайдер и chain analytics, санкционные списки, лимиты суммы/скорости/страны, ручная очередь для high-risk, мониторинг hot-wallet float, reconciliation с провайдерами, алерты, runbooks, support и восстановление после инцидента.
-7. **Оплата в USD₮:** показать сервисный fee отдельно от bridge/сети; quote гарантирует конечную сумму только на ограниченный срок. На сетях, где провайдер не поддерживает gas sponsorship/token fee, не маскировать native gas под USD₮ — перед подтверждением честно сообщать, что маршрут недоступен.
+## Known limits
 
-## Правовой gate для России
+- A recovery phrase unlocks funds on every chain derived from it. Browser extensions, XSS, compromised CDN assets, device malware, or a weak password can expose it. Use local/pinned dependencies, a hardened content security policy, independent wallet review, and a threat-modelled recovery flow before mainnet use.
+- Backup completion is self-reported locally. The product cannot verify that a user saved a file or wrote down words.
+- Address registry requests are protected by Telegram HMAC verification and use Postgres in Compose. Production CORS must be restricted with `APP_ORIGINS`. Rate limiting, abuse controls, backup/restore, database failover, alerting and a 10,000-user concurrency test remain deployment work.
+- Current transaction UI is not equivalent to Telegram Wallet: EVM and TRON are separate networks; native gas is required; cross-chain quoting covers only the routes supported by the current EVM client/LI.FI account; no shared USDT ledger or universal USDT fee sponsorship exists.
+- SBP/on-ramp, fiat conversion, KYC/AML, bridge execution monitoring, sanctions checks, account recovery, and production deployment are not connected.
 
-Банк России указывает, что новый режим Федерального закона № 282-ФЗ применяется к цифровым валютам и иностранным стейблкойнам в зависимости от их квалификации. В FAQ ЦБ (обновлено 12.10.2026) указано, что с 01.07.2027 операции резидентов должны идти через лиц, организующих обращение цифровых валют; в частности, брокера с лицензией или организацию обмена, включённую в реестр ЦБ. Там же указаны запреты на отдельные P2P-переводы и перевод с цифрового счёта на self-custody адрес для описанных законом лиц/сценариев. Банк России отдельно указывает запрет использовать криптовалюту как средство платежа внутри РФ. См. [официальные разъяснения ЦБ РФ](https://www.cbr.ru/explan/cryptocurrency/) и [страницу о запуске рынка цифровых валют](https://www.cbr.ru/develop/cryptocurrency/).
+## Production gate
 
-Следовательно, нельзя запускать этот сервис в РФ как обычный свободный on-chain кошелёк или включать P2P. До выбора конкретного лицензированного контрагента нужно получить заключение профильного юриста о классификации именно модели внутреннего обязательства в USD₮, кастодиальном хранении, обмене/выводе, применимости 115-ФЗ, 152-ФЗ и валютного контроля, переходном периоде и допустимой клиентской базе. Перечень реестров и требуемая организационная форма также нуждаются в отдельной правовой проверке. Одного флага `REGULATORY_APPROVED=1` недостаточно; production gate в коде всё равно блокирует старт, пока реальные adapters не реализованы и не проверены.
-
-## Внешние зависимости, которые нельзя настроить из репозитория
-
-Для рабочего интеграционного контура нужны выбранные и заведённые владельцем аккаунты/договора:
-
-- Telegram bot token и домен Mini App;
-- hosting и PostgreSQL в одобренной российской зоне с секрет-хранилищем, журналированием и резервными копиями;
-- квалифицированный custody/HSM/MPC сервис и выделенные операционные кошельки;
-- RPC/indexer с гарантиями SLA для EVM/TRON плюс независимая сверка;
-- route/bridge liquidity provider с поддержкой целевых сетей, USDT и реальных направлений;
-- KYC/AML и blockchain analytics провайдеры;
-- легально допустимый банк/on-ramp для СБП и payout/обмен-провайдер в России;
-- зарегистрированный/лицензированный участник рынка, договоры, лимиты и политика комиссий;
-- testnet/сandbox accounts, webhook secrets, source IP/signature requirements и тестовые адреса.
-
-Имена провайдеров в `.env` сейчас только production gates, не подключения. Никто из перечисленных адаптеров не реализован; реального API/БД в облаке не развёрнуто, так как в среде нет Docker, учётных данных хостинга, bot token и договорных credentials. Не включайте реальные секреты в Git или frontend.
-
-## Локальный интеграционный прогон
-
-`docker-compose.yml` предназначен только для sandbox: PostgreSQL + API на loopback. Тесты используют FastAPI/SQLite и исполняются:
-
-```sh
-python3 -m unittest discover -s tests -v
-```
-
-Пока нет provider sandbox, невозможно выполнить on-chain тест депозита/вывода или end-to-end кроссчейн-тест. Перед любым testnet запуском нужно завершить adapters, threat model, независимый security review и обновить тесты на provider callbacks, double-spend/concurrency, reorg, replay, отказ/таймаут и refund.
+Production startup is deliberately blocked. Before launch, finish an independent audit of wallet derivation, encrypted storage, restore/import, UI/script supply chain, transaction confirmation, and address registry; validate each chain/token contract; run testnet deposits, sends and swaps; complete concurrency and failure testing; configure production database, hosting, TLS, monitoring, backups and incident response; and obtain jurisdiction-specific legal review. Do not enter production keys or real funds during this sandbox phase.

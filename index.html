@@ -64,6 +64,10 @@ select option{background:#130B22}
 .rowx{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}.rt b{display:block;font-size:14px;margin-bottom:3px}.rt span{font-size:11px;color:var(--mu);line-height:1.45}.rowx .sb{width:auto;margin:0;padding:10px 14px;flex:none}
 .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}.sg div{background:var(--inp);border:1px solid var(--bd);border-radius:12px;padding:10px;font-size:13px;font-weight:600}.sg small{color:var(--mu);margin-right:5px}
 .qr{display:flex;justify-content:center;margin:8px 0}.qr>div{background:#fff;padding:10px;border-radius:16px}
+.backup-nudge{align-items:center;justify-content:center;padding:22px;z-index:400}.backup-nudge .sheet{border:1px solid var(--ba);border-radius:28px;max-width:390px;align-items:center;text-align:center;box-shadow:0 20px 80px rgba(0,0,0,.55)}
+.backup-mark{width:64px;height:64px;border-radius:22px;background:linear-gradient(135deg,#5B3C8C,#7C52C2);display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 10px 30px var(--gl);margin:4px auto 8px}.backup-mark svg{width:30px;height:30px}
+.backup-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:8px}.backup-actions .pb,.backup-actions .sb{margin:0}
+.lock-sheet{align-self:center;border:1px solid var(--ba);border-radius:28px;max-width:390px}.lock-cover{z-index:500;align-items:center;padding:20px}
 </style>
 </head>
 <body>
@@ -102,12 +106,18 @@ select option{background:#130B22}
     <div class="card"><div class="ct">Верификация <span class="bdg pending" id="k-st">Проверка…</span></div>
       <div class="info" id="k-txt"></div>
       <button class="pb" id="k-btn" onclick="startKyc()">Пройти верификацию</button></div>
-    <div class="card"><div class="ct">Защита кошелька <span class="bdg fail" id="bk-st">Копия не сделана</span></div>
-      <div class="rowx"><div class="rt"><b>Секретная фраза</b><span>12 слов — ключ к вашим деньгам. Если потеряете телефон, только она вернёт доступ. Запишите на бумагу и никому не показывайте.</span></div><button class="sb" onclick="showSeed()">Показать</button></div>
-      <div class="rowx"><div class="rt"><b>Файл-копия</b><span>Зашифрованный файл, который открывается вашим паролем. Сохраните его в облако или на флешку.</span></div><button class="sb" onclick="backup()">Скачать</button></div>
-      <div class="rowx"><div class="rt"><b>Восстановление</b><span>Перенесите кошелёк на новое устройство по фразе или файлу.</span></div><button class="sb" onclick="restore()">Открыть</button></div>
-      <input type="file" id="bf" accept=".json" style="display:none"></div>
+    <div class="card"><div class="ct">Защита кошелька <span class="bdg fail" id="bk-st">Копия не подтверждена</span></div>
+      <div class="info">Секретная фраза хранится зашифрованной на этом устройстве. Сервер получает Telegram initData и публичные адреса, но не seed и не ключи.</div>
+      <button class="pb" onclick="openBackupPage()">Резервная копия и восстановление</button></div>
     <div class="card"><div class="ct">Состояние сети</div><div class="info" id="diag"></div></div>
+  </div>
+  <div id="tab-backup" class="tab">
+    <div class="card"><div class="ct">Резервная копия</div><div class="info">Сохраните зашифрованный файл или запишите секретную фразу офлайн. Пароль к файлу и фразу нельзя отправлять в чат или вводить на сторонних сайтах.</div>
+      <div class="rowx"><div class="rt"><b>Зашифрованный файл</b><span>Открывается паролем, который зададите отдельно.</span></div><button class="sb" onclick="backup()">Скачать</button></div>
+      <div class="rowx"><div class="rt"><b>Секретная фраза</b><span>Показывайте только если рядом нет посторонних.</span></div><button class="sb" onclick="showSeed()">Показать</button></div>
+      <div class="rowx"><div class="rt"><b>Восстановление</b><span>Открыть зашифрованный файл или ввести seed-фразу.</span></div><button class="sb" onclick="restore()">Открыть</button></div>
+      <input type="file" id="bf" accept=".json" style="display:none"></div>
+    <div class="card"><div class="ct">Подтверждение</div><div class="info">После сохранения копии отметьте это, чтобы обновить статус на устройстве.</div><button class="pb" onclick="confirmBackupSaved()">Я сохранил копию</button></div>
   </div>
 </div>
 
@@ -141,6 +151,22 @@ select option{background:#130B22}
   <div class="sg" id="seed-grid"></div><button class="pb" onclick="copySeed()">Скопировать</button>
 </div></div>
 
+<div id="backup-nudge" class="mo backup-nudge" role="dialog" aria-modal="true" aria-labelledby="backup-title"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="backup-mark"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.8 2.9 8.2 7 10 4.1-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+  <h2 id="backup-title" style="font-size:20px">Защитите доступ к кошельку</h2>
+  <p class="info">Сохраните резервную копию сейчас. Только вы контролируете секретную фразу — без неё восстановить доступ не получится.</p>
+  <div class="backup-actions"><button class="sb" onclick="laterBackup()">Позже</button><button class="pb" onclick="nowBackup()">Сейчас</button></div>
+</div></div>
+
+<div id="wallet-lock" class="mo lock-cover active" role="dialog" aria-modal="true"><div class="sheet lock-sheet" onclick="event.stopPropagation()">
+  <div class="backup-mark"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div>
+  <h2 id="lock-title" style="font-size:20px;text-align:center">Защитите кошелёк паролем</h2>
+  <p class="info" id="lock-copy">Пароль шифрует секретную фразу на устройстве. Мы не можем восстановить его.</p>
+  <div class="ig" style="width:100%"><span class="il">Пароль устройства</span><input id="wallet-password" type="password" autocomplete="current-password" minlength="12" placeholder="Не менее 12 символов"></div>
+  <div class="ig" id="wallet-password-confirm-wrap" style="width:100%"><span class="il">Повторите пароль</span><input id="wallet-password-confirm" type="password" autocomplete="new-password" minlength="12" placeholder="Повторите пароль"></div>
+  <div class="info" id="wallet-lock-error" role="alert"></div><button class="pb" onclick="unlockWallet()">Открыть кошелёк</button>
+</div></div>
+
 <div class="nav">
   <div class="ni active" onclick="tab('home',this)"><span data-i="home"></span>Главная</div>
   <div class="ni" onclick="tab('history',this)"><span data-i="hist"></span>История</div>
@@ -152,6 +178,7 @@ select option{background:#130B22}
 <script>
 // ===== НАСТРОЙКИ ИНТЕГРАЦИЙ =====
 const CFG={
+  BACKEND_API:'', // optional address registry; server receives Telegram initData + public addresses only
   PAY_API:'',   // бэкенд платёжного шлюза СБП. POST /sbp/invoice {uid,rub,asset,network,address} -> {id,qr,amountCrypto}; GET /sbp/invoice/:id -> {status:'pending|paid|failed|expired'}
   KYC_API:'',   // провайдер верификации. GET /status?uid= -> {status:'approved|pending|none',url}
   ES_KEY:'',    // необязательно: ключ Etherscan V2 (полная история BNB Chain). Без него история берётся из открытых источников
@@ -185,7 +212,7 @@ const ERC=['function balanceOf(address) view returns (uint256)','function transf
 const H=[],P={USDT:1,USDC:1},PR={};
 for(const n in NETS){H.push({net:n,sym:NETS[n].nat,tok:null,dec:n==='TRX'?6:18,bal:null});TOK[n].forEach(([s,a,d])=>H.push({net:n,sym:s,tok:a,dec:d,bal:null}))}
 const prov=n=>PR[n]||(PR[n]=CFG.RPC[n]?new ethers.providers.StaticJsonRpcProvider(CFG.RPC[n],NETS[n].id):new ethers.providers.FallbackProvider(NETS[n].rpc.map((url,i)=>({provider:new ethers.providers.StaticJsonRpcProvider(url,NETS[n].id),priority:i+1,weight:1,stallTimeout:1500}))));
-const S={hist:[],hLoaded:false};
+const S={hist:[],hLoaded:false,walletLockTimer:null};
 const coin=h=>`<div class="co"><i>${h.sym[0]}</i><img src="https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ICO[h.sym]}.svg" onerror="this.remove()"><span class="nb ${h.net}">${h.net[0]}</span></div>`;
 
 const tmo=(p,ms=8000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('таймаут')),ms))]);
@@ -202,24 +229,64 @@ async function tron(path,body){let err;for(const h of TH){try{return await tmo(f
 function tronOk(a){try{const d=ethers.utils.base58.decode(a);return d.length===25&&d[0]===0x41&&ethers.utils.hexlify(d.slice(21))===ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(d.slice(0,21))),0,4)}catch(e){return false}}
 
 // ===== АККАУНТ: уникальный кошелёк и хранилище на каждого пользователя =====
+const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const WALLET_KDF_ITERATIONS=600000;
+async function deriveWalletStorageKey(password,salt,use){
+  const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:WALLET_KDF_ITERATIONS,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,[use]);
+}
+async function encryptWalletRecord(mnemonic,password){
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},await deriveWalletStorageKey(password,salt,'encrypt'),new TextEncoder().encode(mnemonic));
+  return JSON.stringify({v:2,kdf:'PBKDF2-SHA256',iterations:WALLET_KDF_ITERATIONS,salt:b64(salt),iv:b64(iv),ciphertext:b64(cipher),address:ethers.Wallet.fromMnemonic(mnemonic).address});
+}
 function initAccount(){
   const u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user;
-  S.uid=u?String(u.id):'local';S.mk='aether_m_'+S.uid;S.tk='aether_tx_'+S.uid;
-  // Telegram initDataUnsafe is presentation data only; never use it as proof of identity.
-  // Do not migrate a shared legacy key into per-user Telegram storage: that can reuse one wallet across accounts.
-  let m=localStorage.getItem(S.mk)||(!u&&localStorage.getItem('aether_master_mnemonic'));
-  if(!m||!ethers.utils.isValidMnemonic(m))m=ethers.Wallet.createRandom().mnemonic.phrase;
-  localStorage.setItem(S.mk,m);
+  S.uid=u?String(u.id):'local';S.mk='aether_wallet_v2_'+S.uid;S.tk='aether_tx_'+S.uid;
+  S.legacyMnemonic=localStorage.getItem('aether_m_'+S.uid)||(!u&&localStorage.getItem('aether_master_mnemonic'));
+  S.walletRecord=localStorage.getItem(S.mk);
+  S.pendingMnemonic=S.legacyMnemonic&&ethers.utils.isValidMnemonic(S.legacyMnemonic)?S.legacyMnemonic:ethers.Wallet.createRandom().mnemonic.phrase;
   S.loc=JSON.parse(localStorage.getItem(S.tk)||'[]');
+  const encrypted=!!S.walletRecord;
+  $('lock-title').textContent=encrypted?'Откройте кошелёк':'Создайте пароль кошелька';
+  $('lock-copy').textContent=encrypted?'Введите пароль, которым зашифрован кошелёк на этом устройстве.':'Пароль шифрует секретную фразу на этом устройстве. Мы не можем восстановить его.';
+  $('wallet-password-confirm-wrap').style.display=encrypted?'none':'';
+  $('wallet-password').autocomplete=encrypted?'current-password':'new-password';
+  document.querySelector('#wallet-lock .pb').textContent=encrypted?'Открыть кошелёк':'Создать кошелёк';
+  if(u){$('uname').textContent=u.username?'@'+u.username:u.first_name;$('ini').textContent=(u.first_name||'A').slice(0,2).toUpperCase()}
+  return new Promise(resolve=>{S.finishWalletUnlock=resolve});
+}
+function installMnemonic(m){
   S.m=m;S.w=ethers.Wallet.fromMnemonic(m);S.evm=S.w.address;
   const k=ethers.utils.HDNode.fromMnemonic(m).derivePath("m/44'/195'/0'/0/0").privateKey;
   S.trk=k;const raw=ethers.utils.concat(['0x41',ethers.utils.computeAddress(k)]);
   const chk=ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(raw)),0,4);
-  S.tron=ethers.utils.base58.encode(ethers.utils.concat([raw,chk]));
-  S.tronHex=ethers.utils.hexlify(raw).slice(2);
-  
+  S.tron=ethers.utils.base58.encode(ethers.utils.concat([raw,chk]));S.tronHex=ethers.utils.hexlify(raw).slice(2);
   $('chip').textContent=S.evm.slice(0,6)+'…'+S.evm.slice(-4);
-  if(u){$('uname').textContent=u.username?'@'+u.username:u.first_name;$('ini').textContent=(u.first_name||'A').slice(0,2).toUpperCase()}
+}
+async function unlockWallet(){
+  const error=$('wallet-lock-error'),password=$('wallet-password').value;
+  error.textContent='';
+  try{
+    if(password.length<12)throw new Error('Используйте пароль длиной не менее 12 символов.');
+    let mnemonic;
+    if(S.walletRecord){
+      const record=JSON.parse(S.walletRecord);
+      if(record.v!==2||record.kdf!=='PBKDF2-SHA256'||record.iterations!==WALLET_KDF_ITERATIONS)throw new Error('Неизвестный формат локального кошелька.');
+      const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(record.iv)},await deriveWalletStorageKey(password,ub(record.salt),'decrypt'),ub(record.ciphertext));
+      mnemonic=new TextDecoder().decode(plain);
+      if(!ethers.utils.isValidMnemonic(mnemonic)||ethers.Wallet.fromMnemonic(mnemonic).address.toLowerCase()!==String(record.address).toLowerCase())throw new Error('Файл кошелька повреждён.');
+    }else{
+      const confirmation=$('wallet-password-confirm').value;
+      if(password!==confirmation)throw new Error('Пароли не совпадают.');
+      mnemonic=S.pendingMnemonic;
+      S.walletRecord=await encryptWalletRecord(mnemonic,password);localStorage.setItem(S.mk,S.walletRecord);
+      localStorage.removeItem('aether_m_'+S.uid);if(S.uid==='local')localStorage.removeItem('aether_master_mnemonic');
+    }
+    S.walletPassword=password;installMnemonic(mnemonic);S.pendingMnemonic=null;S.legacyMnemonic=null;$('wallet-lock').classList.remove('active');
+    $('wallet-password').value='';$('wallet-password-confirm').value='';
+    const done=S.finishWalletUnlock;S.finishWalletUnlock=null;if(done)done();else{syncAll();registerWalletAddresses()}
+  }catch(e){error.textContent=e.message==='The operation failed for an operation-specific reason'?'Пароль неверный или данные повреждены.':e.message.includes('decrypt')||e.name==='OperationError'?'Пароль неверный или данные повреждены.':e.message}
 }
 const saveLoc=()=>localStorage.setItem(S.tk,JSON.stringify(S.loc.slice(-100)));
 
@@ -303,6 +370,7 @@ function renderHist(){
 }
 
 async function syncAll(){
+  if(!S.w){$('upd').textContent='Кошелёк заблокирован';return}
   if(S.syncing)return;S.syncing=true;
   $('upd').textContent='Синхронизация…';
   try{await Promise.all([...H.filter(h=>h.net!=='TRX').map(syncEvm),syncTron(),syncPrices(),loadHist()]);$('upd').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU')}
@@ -414,21 +482,36 @@ function updDep(){
   $('d-note').textContent='Принимаются: '+H.filter(h=>h.net===n).map(h=>h.sym).join(', ')+' только в сети '+NETS[n].name+'. Иначе средства будут потеряны.';
 }
 function copyAddr(){hap();navigator.clipboard.writeText($('d-addr').textContent);alert('Адрес скопирован')}
-const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async function dkey(pw,salt,use){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,[use])}
+async function dkey(pw,salt,use,iterations=WALLET_KDF_ITERATIONS){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,[use])}
 async function backup(){
-  const pw=prompt('Придумайте пароль для бэкапа (минимум 8 символов). Без него файл не открыть.');if(!pw||pw.length<8)return;
+  const pw=prompt('Задайте пароль для файла резервной копии (минимум 12 символов). Храните его отдельно от файла.');if(!pw||pw.length<12)return;
   const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await dkey(pw,salt,'encrypt'),new TextEncoder().encode(S.m));
-  const data=JSON.stringify({v:1,addr:S.evm,salt:b64(salt),iv:b64(iv),ct:b64(ct)});
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download='aether-backup-'+S.evm.slice(2,8)+'.json';a.click();
-  try{await navigator.clipboard.writeText(data)}catch(e){}mark();alert('Бэкап сохранён и скопирован в буфер обмена. Храните файл и пароль отдельно.');
+  const iterations=600000,ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await dkey(pw,salt,'encrypt',iterations),new TextEncoder().encode(S.m));
+  const data=JSON.stringify({v:2,kdf:'PBKDF2-SHA256',iterations,addr:S.evm,salt:b64(salt),iv:b64(iv),ct:b64(ct)});
+  const url=URL.createObjectURL(new Blob([data],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='aether-backup-'+S.evm.slice(2,8)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  if(confirm('Файл резервной копии скачивается. Вы сохранили файл и пароль отдельно?'))mark();
 }
-function showSeed(){$('seed-grid').innerHTML=S.m.split(' ').map((w,i)=>`<div><small>${i+1}</small>${w}</div>`).join('');openModal('seed');mark()}
+function showSeed(){$('seed-grid').innerHTML=S.m.split(' ').map((w,i)=>`<div><small>${i+1}</small>${w}</div>`).join('');openModal('seed')}
 function copySeed(){navigator.clipboard.writeText(S.m);alert('Скопировано. Храните в надёжном месте.')}
 function mark(){localStorage.setItem('aether_bk_'+S.uid,'1');bkUi()}
-function bkUi(){const ok=localStorage.getItem('aether_bk_'+S.uid);$('bk-st').className='bdg '+(ok?'ok':'fail');$('bk-st').textContent=ok?'Копия сделана':'Копия не сделана'}
+function confirmBackupSaved(){if(confirm('Подтверждаете, что копия сохранена отдельно и вы сможете её восстановить?'))mark()}
+function bkUi(){const ok=localStorage.getItem('aether_bk_'+S.uid);$('bk-st').className='bdg '+(ok?'ok':'fail');$('bk-st').textContent=ok?'Копия подтверждена':'Копия не подтверждена'}
+function openBackupPage(){closeModals();tab('backup');document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));document.querySelector('.ni:last-child').classList.add('active')}
+function nowBackup(){localStorage.setItem('aether_backup_prompted_'+S.uid,'1');openBackupPage()}
+function laterBackup(){localStorage.setItem('aether_backup_prompted_'+S.uid,'1');closeModals()}
+function lockWallet(){
+  if(!S.w)return;S.walletPassword='';S.m='';S.w=null;S.trk='';$('wallet-password').value='';$('wallet-password-confirm').value='';
+  $('lock-title').textContent='Откройте кошелёк';$('lock-copy').textContent='Введите пароль, которым зашифрован кошелёк на этом устройстве.';
+  $('wallet-password-confirm-wrap').style.display='none';$('wallet-password').autocomplete='current-password';
+  document.querySelector('#wallet-lock .pb').textContent='Открыть кошелёк';$('wallet-lock').classList.add('active');
+}
+async function registerWalletAddresses(){
+  if(!CFG.BACKEND_API||!tg||!tg.initData)return;
+  try{const r=await fetch(CFG.BACKEND_API.replace(/\/$/,'')+'/v1/wallet/addresses',{method:'PUT',headers:{'content-type':'application/json','Authorization':'tma '+tg.initData},body:JSON.stringify({addresses:{BSC:S.evm,ETH:S.evm,POL:S.evm,ARB:S.evm,TRX:S.tron}})});
+    if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!j.saved)throw new Error('address registry rejected request');
+  }catch(e){console.warn('Public address registry unavailable:',e.message)}
+}
 async function kycUi(){
   const st=$('k-st'),tx=$('k-txt'),b=$('k-btn');
   if(!CFG.KYC_API){st.className='bdg pending';st.textContent='Не подключена';b.disabled=true;tx.textContent='Верификация понадобится для покупки криптовалюты через СБП. Сервис ещё не подключён.';return}
@@ -438,27 +521,35 @@ async function kycUi(){
   }catch(e){st.className='bdg fail';st.textContent='Нет связи';tx.textContent='Не удалось получить статус верификации.'}
 }
 function startKyc(){kyc().then(kycUi)}
-function setSeed(m){if(!ethers.utils.isValidMnemonic(m))return alert('Неверная seed-фраза');localStorage.setItem(S.mk,m);localStorage.removeItem(S.tk);location.reload()}
+async function setSeed(m){if(!ethers.utils.isValidMnemonic(m))return alert('Неверная seed-фраза');if(!S.walletPassword)return alert('Сначала разблокируйте кошелёк');localStorage.setItem(S.mk,await encryptWalletRecord(m,S.walletPassword));localStorage.removeItem(S.tk);location.reload()}
 function restore(){
   if(confirm('Восстановить из файла бэкапа? (Отмена — ввести seed-фразу)'))return $('bf').click();
   const m=(prompt('Seed-фраза (12/24 слова). Текущий кошелёк будет заменён — сначала сохраните его!')||'').trim().toLowerCase();if(m)setSeed(m);
 }
-$('bf').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text()),pw=prompt('Пароль от бэкапа');
-  const m=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(d.iv)},await dkey(pw,ub(d.salt),'decrypt'),ub(d.ct)));setSeed(m)}catch(x){alert('Не удалось расшифровать: неверный пароль или файл')}};
+$('bf').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text()),pw=prompt('Пароль от файла резервной копии');
+  if(![1,2].includes(d.v)||!pw)throw new Error('Invalid backup');const iterations=d.v===1?250000:d.iterations;
+  if(d.v===2&&(d.kdf!=='PBKDF2-SHA256'||iterations!==600000))throw new Error('Unsupported backup');
+  const m=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(d.iv)},await dkey(pw,ub(d.salt),'decrypt',iterations),ub(d.ct)));
+  if(!ethers.utils.isValidMnemonic(m)||ethers.Wallet.fromMnemonic(m).address.toLowerCase()!==String(d.addr).toLowerCase())throw new Error('Backup address mismatch');
+  await setSeed(m)}catch(x){alert('Не удалось восстановить: неверный пароль, файл или адрес кошелька')}finally{e.target.value=''}};
 
 function tab(id,el){hap();document.querySelectorAll('.tab,.ni').forEach(t=>t.classList.remove('active'));$('tab-'+id).classList.add('active');
   const n=el||[...document.querySelectorAll('.ni')].find(x=>x.getAttribute('onclick').includes("'"+id+"'"));if(n)n.classList.add('active')}
 function openModal(id){hap();closeModals();$(id).classList.add('active');if(id==='dep')updDep()}
 function closeModals(){document.querySelectorAll('.mo').forEach(m=>m.classList.remove('active'))}
 
-window.onload=()=>{
-  initAccount();
+window.onload=async()=>{
+  await initAccount();
   $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');
   const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).filter(Boolean).join('');
   $('w-from').innerHTML=ev;$('b-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
   $('w-tn').innerHTML=Object.keys(NETS).filter(n=>n!=='TRX').map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');fillTo();
-  render();renderHist();syncAll();kycUi();bkUi();
-  setInterval(syncAll,20000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncAll()});
+  render();renderHist();syncAll();kycUi();bkUi();registerWalletAddresses();
+  if(!localStorage.getItem('aether_bk_'+S.uid)&&!localStorage.getItem('aether_backup_prompted_'+S.uid))setTimeout(()=>openModal('backup-nudge'),700);
+  setInterval(syncAll,20000);document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){clearTimeout(S.walletLockTimer);S.walletLockTimer=null;syncAll()}
+    else{clearTimeout(S.walletLockTimer);S.walletLockTimer=setTimeout(()=>{if(document.hidden)lockWallet()},60000)}
+  });
 };
 </script>
 </body>

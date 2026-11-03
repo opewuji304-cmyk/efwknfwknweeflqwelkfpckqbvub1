@@ -72,6 +72,36 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(accepted.status_code, 200)
         self.assertEqual(accepted.json()["balance_minor"], 0)
 
+    def test_wallet_addresses_require_telegram_auth_and_are_persisted(self):
+        addresses = {"BSC": "0x" + "1" * 40, "ETH": "0x" + "1" * 40,
+                     "POL": "0x" + "1" * 40, "ARB": "0x" + "1" * 40,
+                     "TRX": "TBXSw8fM4jpQkGc6zZjsVABFpVN7UvXPdV"}
+        denied = self.request("PUT", "/v1/wallet/addresses", json={"addresses": addresses})
+        self.assertEqual(denied.status_code, 401)
+        headers = {"Authorization": "tma " + init_data()}
+        saved = self.request("PUT", "/v1/wallet/addresses", json={"addresses": addresses}, headers=headers)
+        self.assertEqual(saved.status_code, 200)
+        self.assertTrue(saved.json()["saved"])
+        loaded = self.request("GET", "/v1/wallet/addresses", headers=headers)
+        self.assertEqual(loaded.status_code, 200)
+        self.assertEqual(loaded.json()["addresses"], addresses)
+        other_headers = {"Authorization": "tma " + init_data(user_id="123456789")}
+        collision = self.request("PUT", "/v1/wallet/addresses", json={"addresses": addresses}, headers=other_headers)
+        self.assertEqual(collision.status_code, 409)
+
+    def test_wallet_registry_rejects_mixed_evm_accounts_and_bad_networks(self):
+        headers = {"Authorization": "tma " + init_data()}
+        mixed = {"BSC": "0x" + "1" * 40, "ETH": "0x" + "2" * 40,
+                 "POL": "0x" + "1" * 40, "ARB": "0x" + "1" * 40,
+                 "TRX": "TBXSw8fM4jpQkGc6zZjsVABFpVN7UvXPdV"}
+        response = self.request("PUT", "/v1/wallet/addresses", json={"addresses": mixed}, headers=headers)
+        self.assertEqual(response.status_code, 422)
+        bad_tron = {"BSC": "0x" + "1" * 40, "ETH": "0x" + "1" * 40,
+                    "POL": "0x" + "1" * 40, "ARB": "0x" + "1" * 40,
+                    "TRX": "not-an-address"}
+        response = self.request("PUT", "/v1/wallet/addresses", json={"addresses": bad_tron}, headers=headers)
+        self.assertEqual(response.status_code, 422)
+
     def test_sandbox_credit_is_protected_and_idempotent(self):
         payload = {"event_id": "sandbox-event-0001", "telegram_id": "987654321", "amount_minor": 1234567, "status": "confirmed"}
         denied = self.request("POST", "/internal/dev/credits", json=payload, headers={"X-Dev-Token": "wrong"})
@@ -159,12 +189,13 @@ class BackendTests(unittest.TestCase):
             payout_provider="configured",
             kms_key_reference="configured",
         )
-        self.assertTrue(any("adapters" in gap for gap in production.production_gaps()))
+        self.assertTrue(any("security review" in gap for gap in production.production_gaps()))
+        self.assertTrue(any("load test" in gap for gap in production.production_gaps()))
         app = create_app(production)
         async def enter_production_lifespan():
             async with app.router.lifespan_context(app):
                 pass
-        with self.assertRaisesRegex(RuntimeError, "audited production provider adapters"):
+        with self.assertRaisesRegex(RuntimeError, "security review"):
             asyncio.run(enter_production_lifespan())
 
 

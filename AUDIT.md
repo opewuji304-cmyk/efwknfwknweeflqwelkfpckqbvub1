@@ -1,36 +1,22 @@
-# Аудит Aether Wallet
+# Aether Wallet implementation review
 
-Проверен исходный `index.html` в ветке `main`. Сохранён существующий визуальный стиль; изменения затрагивают проверки, обработку ошибок и безопасность вывода.
+## Changes in this pass
 
-## Что исправлено
+- Replaced the browser's plaintext mnemonic storage with a password-encrypted local record (AES-GCM, Web Crypto, PBKDF2, 600,000 iterations). Existing plaintext browser records are migrated after the user sets a password and then removed.
+- Added the first-session **Now / Later** backup prompt. **Now** opens the backup screen; **Later** dismisses it. A seed reveal no longer marks the backup as complete. File export is encrypted and no longer copies the backup blob to the clipboard. Restore checks the decrypted mnemonic and expected EVM address before replacing the local wallet.
+- Added an optional server address registry. It requires Telegram `initData` validated on the server; it stores only public addresses, validates configured networks/address formats, and prevents the same network/address being linked to multiple Telegram users.
+- Production startup remains fail-closed pending legal approval, independent review, chain testnet run, load test, and operations readiness.
 
-- Отправка и обмен блокируются, если сеть не вернула актуальный баланс. Раньше `null` трактовался как разрешение продолжить.
-- Перед EVM-переводом оценивается gas и проверяется, что native coin покроет сумму и комиссию с запасом. Для чтения и отправки используются одинаковые резервные RPC-узлы.
-- Ошибки TronGrid/TronStack и ответы HTTP с ошибкой больше не воспринимаются как успешный пустой ответ.
-- Удалён пустой пункт TRON из источников LI.FI: его пустое значение могло незаметно выбрать первый EVM-актив.
-- Котировка обмена не принимается, если пользователь изменил сеть или сумму после её получения.
-- Динамические значения в истории и ответе LI.FI экранируются до вставки в HTML; состояние операции ограничено известными значениями.
-- Повторные синхронизации блокируются, пока предыдущая ещё выполняется.
-- Telegram `initDataUnsafe` больше не используется для миграции общей seed-фразы в хранилища разных Telegram-пользователей.
-- Текст комиссии в форме перевода теперь соответствует фактической реализации и не обещает оплату gas в USDT.
+## Remaining security / behavior issues
 
-## Что не реализовано и почему
+- Password-based browser encryption does not protect a session while unlocked. Third-party JavaScript loaded from CDNs can access page memory; local dependencies, CSP, dependency pinning, wallet-specific threat review and penetration testing are still required.
+- Password KDF work can be heavy on low-end devices. Measure on target Telegram clients and consider a vetted memory-hard KDF before launch.
+- Backup status is a local acknowledgement and cannot prove that a backup is usable or stored safely.
+- Telegram ID from `initDataUnsafe` is used only to namespace local browser state and show profile labels. Server identity uses the signed `initData` in the `Authorization: tma` header.
+- Direct EVM/TRON transfers need the chain's native gas asset. The client does not pay every network fee in USDT.
+- The current client does not support every chain/token/route, and testnet/mainnet end-to-end flows were not verified in this environment.
+- The separate `/Users/mac/Desktop/server.py` source originally supplied was a nonfunctional stub: wildcard CORS, no auth, user-controlled HTML in an admin message, fresh `aiohttp` session without timeout/status handling, and fabricated order/QR success. It has now been replaced with the tested backend API; it no longer fabricates orders or payment QR codes.
 
-Это браузерный self-custody прототип: ключ и seed-фраза хранятся незашифрованными в `localStorage`, а клиент сам подписывает транзакции. Балансы из разных сетей — отдельные on-chain активы. Приложение не ведёт общий внутренний USD₮ ledger и не умеет брать на себя native gas за пользователя.
+## Verification
 
-Для целевой кастодиальной модели добавлен backend sandbox с проверкой Telegram `initData`, ledger и PostgreSQL/SQLite схемой. Однако он не подключён к `index.html`, а custody/KMS, on-chain deposit watcher, payout, quote/bridge, KYC/AML, СБП и реальный reconciliation отсутствуют. Dev/webhook зачисление не проверяет блокчейн и годится только для тестов. Production startup закрыт постоянным gate. Etherscan-история для BSC требует ключа; часть истории без него ограничена публичными источниками.
-
-Telegram Mini Apps требуют верифицировать `Telegram.WebApp.initData` на сервере; клиентское `initDataUnsafe` нельзя считать подтверждённой личностью. Это критично, если ID используется для баланса, платежей или прав доступа.
-
-Пока клиент не подключён к серверному ledger и не реализованы custody/payout, нельзя безопасно утверждать, что интерфейс работает «точно как Telegram Wallet». В текущей HTML-странице отдельно видны активы по сетям; комиссии оплачиваются нативной монетой сети. Для переводов USDT в TRON нужен TRX. Эти ограничения показаны прямо в форме отправки.
-
-## Что требуется перед реальными средствами
-
-1. Принята целевая модель: кастодиальный внутренний баланс USD₮.
-2. Добавлены API/DB sandbox, серверная проверка Telegram и тесты; облачного deployment нет.
-3. Для России нужен лицензированный/зарегистрированный участник, заключение юриста и реальные договоры до выбора on/off-ramp, KYC/AML и custody провайдеров. Провайдеров не выбрал и не подключал.
-4. Независимый аудит кошелька/хранения ключей и тестнет интеграции ещё не проводились. См. [ARCHITECTURE.md](ARCHITECTURE.md) для полного deployment gate.
-
-## Проверка
-
-`python3 -m unittest discover -s tests -v` — 7 тестов пройдены; `python3 -m compileall -q backend tests` и `git diff --check` также пройдены. Docker/Compose, тестовый RPC, PostgreSQL server, провайдерские ключи и hosting credentials в среде отсутствуют, поэтому контейнерный запуск, Postgres интеграцию, mainnet/testnet поток и production deployment проверить нельзя. Изменения опубликованы в ветке GitHub `main`; публичный сайт и backend deployment не развёрнуты.
+Backend unit tests cover Telegram HMAC/expiry, address registration/authentication, address format checks, collisions, sandbox idempotency, and fail-closed withdrawals. Python compilation passes. Docker is not installed in the current environment, so Compose/PostgreSQL runtime, actual chain RPC, third-party quote execution, mobile Telegram display, and 10,000-user behavior still need external verification.
