@@ -23,6 +23,7 @@ services:
       DATABASE_URL: postgresql://aether:${POSTGRES_PASSWORD}@db:5432/aether
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set a Telegram bot token for local integration}
       APP_ORIGINS: ${APP_ORIGINS:?Set the exact Mini App origin}
+      TRONGRID_API_KEY: ${TRONGRID_API_KEY:-}
       DEPOSIT_WEBHOOK_SECRET: ${DEPOSIT_WEBHOOK_SECRET:-}
       ACQUIRER_WEBHOOK_SECRET: ${ACQUIRER_WEBHOOK_SECRET:-}
       DEV_CREDIT_ENABLED: ${DEV_CREDIT_ENABLED:-0}
