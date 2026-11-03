@@ -231,8 +231,15 @@ async function rpc(n,m,p){
   }
   throw err;
 }
-const TH=['https://api.trongrid.io','https://api.tronstack.io'];
-async function tron(path,body){let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(async r=>{const j=await r.json();if(!r.ok||j.Error||j.error)throw new Error(j.Error||j.error||`HTTP ${r.status}`);return j}))}catch(e){err=e}}throw err}
+const TH=['https://api.trongrid.io'];
+async function tron(path,body){
+  if(CFG.BACKEND_API){
+    if(!tg||!tg.initData)throw new Error('Откройте кошелёк из Telegram для подключения к TRON Mainnet.');
+    const r=await tmo(fetch(CFG.BACKEND_API.replace(/\/$/,'')+'/v1/tron/rpc',{method:'POST',headers:{'content-type':'application/json','Authorization':'tma '+tg.initData},body:JSON.stringify({method:body?'POST':'GET',path,body:body||null})}));
+    const j=await r.json();if(!r.ok||j.Error||j.error||j.detail)throw new Error(j.detail||j.Error||j.error||`HTTP ${r.status}`);return j;
+  }
+  let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(async r=>{const j=await r.json();if(!r.ok||j.Error||j.error)throw new Error(j.Error||j.error||`HTTP ${r.status}`);return j}))}catch(e){err=e}}throw err
+}
 function tronOk(a){try{const d=ethers.utils.base58.decode(a);return d.length===25&&d[0]===0x41&&ethers.utils.hexlify(d.slice(21))===ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(d.slice(0,21))),0,4)}catch(e){return false}}
 function tronAddr20(a){
   if(typeof a!=='string')throw new Error('Некорректный TRON-адрес');
