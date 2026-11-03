@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import base64
 import os
 import re
 import secrets
@@ -27,6 +28,7 @@ class Settings:
     app_env: str = "development"
     database_url: str = "sqlite:///./aether-sandbox.db"
     telegram_bot_token: str = ""
+    api_session_secret: str = ""
     trongrid_api_key: str = ""
     telegram_auth_max_age_seconds: int = 300
     app_origins: tuple[str, ...] = ()
@@ -52,6 +54,7 @@ class Settings:
             app_env=os.getenv("APP_ENV", "development"),
             database_url=os.getenv("DATABASE_URL", "sqlite:///./aether-sandbox.db"),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
+            api_session_secret=os.getenv("API_SESSION_SECRET", ""),
             trongrid_api_key=os.getenv("TRONGRID_API_KEY", ""),
             telegram_auth_max_age_seconds=int(os.getenv("TELEGRAM_AUTH_MAX_AGE_SECONDS", "300")),
             app_origins=tuple(origin.strip() for origin in os.getenv("APP_ORIGINS", "").split(",") if origin.strip()),
@@ -81,6 +84,8 @@ class Settings:
             "REGULATORY_APPROVED=1": self.regulatory_approved,
         }
         gaps = [name for name, value in required.items() if not value]
+        if len(self.api_session_secret) < 32:
+            gaps.append("API_SESSION_SECRET (at least 32 characters)")
         if not self.database_url.startswith(("postgresql://", "postgres://")):
             gaps.append("PostgreSQL DATABASE_URL")
         # This app is transitioning to self-custody. Never treat environment flags as proof
@@ -273,6 +278,43 @@ def validate_telegram_init_data(init_data: str, bot_token: str, max_age: int, no
     current = int(time.time()) if now is None else now
     if auth_date > current + 30 or current - auth_date > max_age:
         raise ValueError("Telegram authorization expired")
+    return {"id": user_id}
+
+
+API_SESSION_TTL_SECONDS = 12 * 60 * 60
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def issue_api_session(user_id: str, secret: str, now: int | None = None) -> tuple[str, int]:
+    if len(secret) < 32:
+        raise ValueError("API session signing secret is not configured")
+    issued = int(time.time()) if now is None else now
+    expires = issued + API_SESSION_TTL_SECONDS
+    payload = _b64url(json.dumps({"sub": user_id, "iat": issued, "exp": expires}, separators=(",", ":")).encode())
+    signature = _b64url(hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest())
+    return payload + "." + signature, expires
+
+
+def validate_api_session(token: str, secret: str, now: int | None = None) -> dict[str, str]:
+    if len(secret) < 32 or not token or len(token) > 2048:
+        raise ValueError("Invalid API session")
+    try:
+        payload_part, signature_part = token.split(".", 1)
+        expected = _b64url(hmac.new(secret.encode(), payload_part.encode(), hashlib.sha256).digest())
+        if not hmac.compare_digest(expected, signature_part):
+            raise ValueError("Invalid API session signature")
+        raw = base64.urlsafe_b64decode(payload_part + "=" * (-len(payload_part) % 4))
+        payload = json.loads(raw)
+        user_id = str(int(payload["sub"]))
+        issued, expires = int(payload["iat"]), int(payload["exp"])
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        raise ValueError("Malformed API session") from exc
+    current = int(time.time()) if now is None else now
+    if issued > current + 30 or expires <= current or expires - issued != API_SESSION_TTL_SECONDS:
+        raise ValueError("API session expired")
     return {"id": user_id}
 
 
@@ -527,13 +569,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     def authenticated_user(authorization: str | None = Header(default=None)) -> dict[str, str]:
-        if not authorization or not authorization.startswith("tma "):
-            raise HTTPException(status_code=401, detail="Telegram initData required")
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Telegram session required")
+        scheme, _, credential = authorization.partition(" ")
         try:
-            return validate_telegram_init_data(authorization[4:], config.telegram_bot_token,
-                                               config.telegram_auth_max_age_seconds)
+            if scheme.lower() == "bearer":
+                return validate_api_session(credential, config.api_session_secret or config.telegram_bot_token)
+            if scheme == "tma":
+                return validate_telegram_init_data(credential, config.telegram_bot_token,
+                                                   config.telegram_auth_max_age_seconds)
+            raise ValueError("Unsupported authorization scheme")
         except ValueError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    @app.post("/v1/session")
+    def create_session(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        if not authorization or not authorization.startswith("tma "):
+            raise HTTPException(status_code=401, detail="Fresh Telegram initData required")
+        try:
+            user = validate_telegram_init_data(authorization[4:], config.telegram_bot_token,
+                                               config.telegram_auth_max_age_seconds)
+            token, expires = issue_api_session(user["id"], config.api_session_secret or config.telegram_bot_token)
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        return {"token_type": "Bearer", "token": token, "expires_at": expires}
 
     @app.get("/health")
     def health() -> dict[str, str]:
