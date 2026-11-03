@@ -126,8 +126,15 @@ select option{background:#130B22}
   <div class="ig"><span class="il">Актив и сеть</span><select id="s-asset"></select></div>
   <div class="ig"><span class="il">Адрес получателя (в той же сети)</span><input id="s-addr" placeholder="0x…"></div>
   <div class="ig"><span class="il">Сумма</span><input id="s-amt" type="number" inputmode="decimal" placeholder="0.00"></div>
-  <div class="info">Сейчас комиссия блокчейна оплачивается нативной монетой сети (BNB / ETH / POL / TRX). Списание сетевой комиссии в USDT, общий баланс и отправка между сетями требуют серверного сервиса и здесь не подключены.</div>
+  <div class="info">Перевод отправится в выбранной сети. Комиссия оплачивается её нативной монетой (BNB / ETH / POL / TRX); до подписи приложение покажет сумму, адрес и расчёт комиссии.</div>
   <button class="pb" id="s-btn" onclick="doSend()">Подтвердить перевод</button>
+</div></div>
+
+<div id="send-review" class="mo" onclick="resolveSendReview(false)"><div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh">Проверьте перевод<span onclick="resolveSendReview(false)">✕</span></div>
+  <div class="card" id="review-details"></div>
+  <div class="info">Транзакции в блокчейне необратимы. Подписывая, вы отправляете указанный актив именно в этой сети.</div>
+  <div class="backup-actions"><button class="sb" onclick="resolveSendReview(false)">Отмена</button><button class="pb" onclick="resolveSendReview(true)">Подписать и отправить</button></div>
 </div></div>
 
 <div id="dep" class="mo" onclick="closeModals()"><div class="sheet" onclick="event.stopPropagation()">
@@ -227,6 +234,12 @@ async function rpc(n,m,p){
 const TH=['https://api.trongrid.io','https://api.tronstack.io'];
 async function tron(path,body){let err;for(const h of TH){try{return await tmo(fetch(h+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:undefined).then(async r=>{const j=await r.json();if(!r.ok||j.Error||j.error)throw new Error(j.Error||j.error||`HTTP ${r.status}`);return j}))}catch(e){err=e}}throw err}
 function tronOk(a){try{const d=ethers.utils.base58.decode(a);return d.length===25&&d[0]===0x41&&ethers.utils.hexlify(d.slice(21))===ethers.utils.hexDataSlice(ethers.utils.sha256(ethers.utils.sha256(d.slice(0,21))),0,4)}catch(e){return false}}
+function tronAddr20(a){
+  if(typeof a!=='string')throw new Error('Некорректный TRON-адрес');
+  if(/^(41)?[0-9a-f]{40,42}$/i.test(a)){const h=a.toLowerCase().replace(/^41/,'');if(h.length===40)return h}
+  const d=ethers.utils.base58.decode(a);if(d.length!==25||d[0]!==0x41)throw new Error('Некорректный TRON-адрес');return ethers.utils.hexlify(d.slice(1,21)).slice(2).toLowerCase();
+}
+const TRON_MAX_ENERGY_FEE_SUN=50000000,TRON_ENERGY_BUFFER_BPS=13000;
 
 // ===== АККАУНТ: уникальный кошелёк и хранилище на каждого пользователя =====
 const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -380,7 +393,7 @@ async function syncAll(){
 // ===== ОТПРАВКА =====
 function openSend(i){
   hap();$('s-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}${h.bal!==null?' — '+fmt(h.bal):''}</option>`).join('');
-  if(typeof i==='number')$('s-asset').value=i;
+  $('s-asset').value=typeof i==='number'?i:H.findIndex(h=>h.net==='TRX'&&h.sym==='USDT');
   openModal('send');
 }
 function rec(tx,h,amt,extra){const r={hash:tx.hash,t:Date.now(),net:h.net,sym:h.sym,amt:+amt,dir:'out',st:'pending',...extra};S.loc.push(r);saveLoc();loadHist();
@@ -393,30 +406,98 @@ async function doSend(){
   if(+a>h.bal)return alert('Недостаточно средств');
   if(!Number.isFinite(Number(a)))return alert('Введите корректную сумму');
   const b=$('s-btn');b.disabled=true;b.textContent='Отправка в сеть…';
-  try{if(h.net==='TRX'){await sendTron(h,to,a);closeModals();b.disabled=false;b.textContent='Подтвердить перевод';return}const p=prov(h.net),w=S.w.connect(p),v=ethers.utils.parseUnits(a,h.dec);
+  try{if(h.net==='TRX'){if(await sendTron(h,to,a))closeModals();return}const p=prov(h.net),w=S.w.connect(p),v=ethers.utils.parseUnits(a,h.dec);
     const txc=h.tok?new ethers.Contract(h.tok,ERC,w):null;
     const gas=h.tok?await txc.estimateGas.transfer(to,v):await w.estimateGas({to,value:v});
     const fee=gas.mul(await p.getGasPrice()).mul(120).div(100);
     const native=await p.getBalance(S.evm),value=h.tok?ethers.constants.Zero:v;
     if(native.lt(fee.add(value)))throw new Error(`Недостаточно ${NETS[h.net].nat} для комиссии сети`);
+    const approved=await reviewSend({asset:h.sym,network:NETS[h.net].name,to,amount:a,fee:`до ${fmt(ethers.utils.formatEther(fee))} ${NETS[h.net].nat}`,feeNote:'Расчёт включает запас 20%; итог зависит от условий сети в момент подтверждения.'});
+    if(!approved)return;
     const tx=h.tok?await txc.transfer(to,v,{gasLimit:gas.mul(120).div(100)}):await w.sendTransaction({to,value,gasLimit:gas.mul(120).div(100)});
     rec(tx,h,a);closeModals();
   }catch(e){alert('Ошибка перевода: '+(e.reason||e.message))}
-  b.disabled=false;b.textContent='Подтвердить перевод';
+  finally{b.disabled=false;b.textContent='Подтвердить перевод'}
 }
 
 async function sendTron(h,to,a){
-  const v=ethers.utils.parseUnits(a,h.dec).toString();let tx;
+  const v=ethers.utils.parseUnits(a,h.dec).toString();let tx,energyFeeCap=0,feeDescription='';
   if(h.tok){
-    const par=ethers.utils.hexZeroPad(ethers.utils.hexlify(ethers.utils.base58.decode(to).slice(1,21)),32).slice(2)+ethers.utils.hexZeroPad(ethers.BigNumber.from(v).toHexString(),32).slice(2);
-    const r=await tron('/wallet/triggersmartcontract',{owner_address:S.tron,contract_address:h.tok,function_selector:'transfer(address,uint256)',parameter:par,fee_limit:100000000,call_value:0,visible:true});
-    if(!r.result||!r.result.result)throw new Error('Не удалось создать транзакцию');tx=r.transaction;
-  }else{tx=await tron('/wallet/createtransaction',{owner_address:S.tron,to_address:to,amount:+v,visible:true});if(!tx.txID)throw new Error('Не удалось создать транзакцию')}
+    const owner=tronAddr20(S.tron),recipient=tronAddr20(to),contract=tronAddr20(h.tok);
+    const par=ethers.utils.hexZeroPad('0x'+recipient,32).slice(2)+ethers.utils.hexZeroPad(ethers.BigNumber.from(v).toHexString(),32).slice(2);
+    const simulation=await tron('/wallet/triggerconstantcontract',{owner_address:S.tron,contract_address:h.tok,function_selector:'transfer(address,uint256)',parameter:par,call_value:0,visible:true});
+    if(!simulation.result||!simulation.result.result)throw new Error('Симуляция перевода USDT не прошла. Проверьте баланс и адрес получателя.');
+    let energy=Number(simulation.energy_used);
+    if(!Number.isSafeInteger(energy)||energy<=0){
+      const estimate=await tron('/wallet/estimateenergy',{owner_address:S.tron,contract_address:h.tok,function_selector:'transfer(address,uint256)',parameter:par,call_value:0,visible:true});
+      if(!estimate.result||!estimate.result.result||!Number.isSafeInteger(Number(estimate.energy_required)))throw new Error('Узел TRON не смог оценить комиссию; перевод остановлен.');
+      energy=Number(estimate.energy_required);
+    }
+    const [resource,account,chain]=await Promise.all([
+      tron('/wallet/getaccountresource',{address:S.tron,visible:true}),
+      tron('/wallet/getaccount',{address:S.tron,visible:true}),
+      tron('/wallet/getchainparameters',{})
+    ]);
+    const params=chain.chainParameter||[],param=k=>Number((params.find(x=>x.key===k)||{}).value||0);
+    const energyPrice=param('getEnergyFee'),bandwidthPrice=param('getTransactionFee');
+    if(!(energyPrice>0)||!(bandwidthPrice>0))throw new Error('Не удалось получить актуальные параметры комиссии TRON.');
+    const availableEnergy=Math.max(0,Number(resource.EnergyLimit||0)-Number(resource.EnergyUsed||0));
+    const energyToBurn=Math.max(0,energy-availableEnergy),energyCostSun=energyToBurn*energyPrice;
+    energyFeeCap=Math.ceil(energy*energyPrice*TRON_ENERGY_BUFFER_BPS/10000);
+    if(!Number.isSafeInteger(energyFeeCap)||energyFeeCap<=0||energyFeeCap>TRON_MAX_ENERGY_FEE_SUN)throw new Error('Расчётный предел комиссии превышает защитный лимит 50 TRX. Перевод остановлен.');
+    const r=await tron('/wallet/triggersmartcontract',{owner_address:S.tron,contract_address:h.tok,function_selector:'transfer(address,uint256)',parameter:par,fee_limit:energyFeeCap,call_value:0,visible:true});
+    if(!r.result||!r.result.result||!r.transaction)throw new Error('Не удалось создать транзакцию TRON.');
+    tx=r.transaction;
+    const c=tx.raw_data&&tx.raw_data.contract&&tx.raw_data.contract[0],cv=c&&c.parameter&&c.parameter.value;
+    const expectedData='a9059cbb'+par.toLowerCase();
+    if(!c||c.type!=='TriggerSmartContract'||!cv||tronAddr20(cv.owner_address)!==owner||tronAddr20(cv.contract_address)!==contract||String(cv.data||'').replace(/^0x/i,'').toLowerCase()!==expectedData||Number(tx.raw_data.fee_limit)!==energyFeeCap)
+      throw new Error('Сеть вернула транзакцию, параметры которой не совпадают с переводом. Ничего не подписано.');
+    const rawHex=String(tx.raw_data_hex||'').replace(/^0x/i,'');
+    if(!rawHex||ethers.utils.sha256('0x'+rawHex).slice(2).toLowerCase()!==String(tx.txID||'').toLowerCase())throw new Error('Не удалось проверить целостность транзакции TRON. Ничего не подписано.');
+    const bandwidthBytes=Math.ceil(rawHex.length/2)+134;
+    const paidNet=Math.max(0,Number(resource.NetLimit||0)-Number(resource.NetUsed||0));
+    const freeNet=Math.max(0,Number(resource.freeNetLimit||0)-Number(resource.freeNetUsed||0));
+    const bandwidthCostSun=(paidNet>=bandwidthBytes||freeNet>=bandwidthBytes)?0:bandwidthBytes*bandwidthPrice;
+    const estimatedFeeSun=energyCostSun+bandwidthCostSun;
+    const trxBalance=Number(account.balance||0);
+    if(trxBalance<estimatedFeeSun)throw new Error(`Недостаточно TRX для расчётной комиссии (≈ ${fmt(estimatedFeeSun/1e6)} TRX).`);
+    feeDescription=`≈ ${fmt(estimatedFeeSun/1e6)} TRX; лимит Energy ${fmt(energyFeeCap/1e6)} TRX (оценка ${energy.toLocaleString('ru-RU')} Energy, запас 30%).`;
+  }else{
+    tx=await tron('/wallet/createtransaction',{owner_address:S.tron,to_address:to,amount:+v,visible:true});if(!tx.txID)throw new Error('Не удалось создать транзакцию');
+    const c=tx.raw_data&&tx.raw_data.contract&&tx.raw_data.contract[0],cv=c&&c.parameter&&c.parameter.value;
+    if(!c||c.type!=='TransferContract'||!cv||tronAddr20(cv.owner_address)!==tronAddr20(S.tron)||tronAddr20(cv.to_address)!==tronAddr20(to)||String(cv.amount)!==v)
+      throw new Error('Сеть вернула транзакцию, параметры которой не совпадают с переводом. Ничего не подписано.');
+    const rawHex=String(tx.raw_data_hex||'').replace(/^0x/i,'');
+    if(!rawHex||ethers.utils.sha256('0x'+rawHex).slice(2).toLowerCase()!==String(tx.txID||'').toLowerCase())throw new Error('Не удалось проверить целостность транзакции TRON. Ничего не подписано.');
+    const [resource,chain,account]=await Promise.all([
+      tron('/wallet/getaccountresource',{address:S.tron,visible:true}),
+      tron('/wallet/getchainparameters',{}),
+      tron('/wallet/getaccount',{address:S.tron,visible:true})
+    ]);
+    const params=chain.chainParameter||[],feeRate=Number((params.find(x=>x.key==='getTransactionFee')||{}).value||0);
+    if(!(feeRate>0))throw new Error('Не удалось получить актуальную комиссию Bandwidth TRON.');
+    const bytes=Math.ceil(rawHex.length/2)+134,paidNet=Math.max(0,Number(resource.NetLimit||0)-Number(resource.NetUsed||0));
+    const freeNet=Math.max(0,Number(resource.freeNetLimit||0)-Number(resource.freeNetUsed||0));
+    const feeSun=(paidNet>=bytes||freeNet>=bytes)?0:bytes*feeRate;
+    if(Number(account.balance||0)<Number(v)+feeSun)throw new Error(`Недостаточно TRX с учётом комиссии Bandwidth (≈ ${fmt(feeSun/1e6)} TRX).`);
+    feeDescription=`≈ ${fmt(feeSun/1e6)} TRX за Bandwidth; расчёт по ресурсам аккаунта и параметрам сети.`;
+  }
+  const approved=await reviewSend({asset:h.sym,network:'TRON Mainnet (TRC-20)',to,amount:a,fee:feeDescription,feeNote:'Комиссия списывается в TRX или ресурсах Energy/Bandwidth, не в USDT.'});
+  if(!approved)return false;
   const sg=new ethers.utils.SigningKey(S.trk).signDigest('0x'+tx.txID);
   tx.signature=[sg.r.slice(2)+sg.s.slice(2)+(sg.recoveryParam?'01':'00')];
   const r=await tron('/wallet/broadcasttransaction',tx);
   if(!r.result)throw new Error(r.code||'Сеть отклонила транзакцию (проверьте, что на балансе есть TRX для комиссии)');
   S.loc.push({hash:tx.txID,t:Date.now(),net:'TRX',sym:h.sym,amt:+a,dir:'out',st:'pending'});saveLoc();loadHist();setTimeout(syncAll,6000);
+  return true;
+}
+
+function reviewSend(d){
+  $('review-details').innerHTML=`<div class="ct">${esc(d.asset)} · ${esc(d.network)}</div><div class="info">Сумма</div><div class="t">${esc(d.amount)} ${esc(d.asset)}</div><div class="info" style="margin-top:12px">Получатель</div><div class="addr">${esc(d.to)}</div><div class="info" style="margin-top:12px">Комиссия сети</div><div class="t">${esc(d.fee)}</div><div class="info">${esc(d.feeNote)}</div>`;
+  openModal('send-review');return new Promise(resolve=>{S.reviewResolver=resolve});
+}
+function resolveSendReview(approved){
+  const resolve=S.reviewResolver;S.reviewResolver=null;document.querySelectorAll('.mo').forEach(m=>m.classList.remove('active'));if(resolve)resolve(!!approved);if(!approved)$('send').classList.add('active');
 }
 
 // ===== ОБМЕН И МОСТЫ (LI.FI) =====
@@ -540,7 +621,7 @@ function closeModals(){document.querySelectorAll('.mo').forEach(m=>m.classList.r
 
 window.onload=async()=>{
   await initAccount();
-  $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');
+  $('d-net').innerHTML=Object.keys(NETS).map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');$('d-net').value='TRX';
   const ev=H.map((h,k)=>h.net==='TRX'?'':`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).filter(Boolean).join('');
   $('w-from').innerHTML=ev;$('b-asset').innerHTML=H.map((h,k)=>`<option value="${k}">${h.sym} · ${NETS[h.net].name}</option>`).join('');
   $('w-tn').innerHTML=Object.keys(NETS).filter(n=>n!=='TRX').map(n=>`<option value="${n}">${NETS[n].name}</option>`).join('');fillTo();
