@@ -7,6 +7,7 @@
 - Added an optional server address registry. It requires Telegram `initData` validated on the server; it stores only public addresses, validates configured networks/address formats, and prevents the same network/address being linked to multiple Telegram users.
 - Added TRON Mainnet transaction review: live Energy/Bandwidth queries, a fee ceiling, transaction-field/hash validation before signature, and an in-app confirmation step. Default Receive and Send now select TRON USDT.
 - Added an authenticated API proxy for a server-side TronGrid key, a strict RPC path allowlist, payload-size limit, and per-process user request throttle. The key remains outside the browser.
+- Added a 12-hour HMAC bearer session minted only after fresh Telegram `initData` validation so the Mini App can poll after the five-minute initData freshness window without extending that window.
 - Production startup remains fail-closed pending legal approval, independent review, controlled low-value Mainnet review, load test, and operations readiness.
 
 ## Remaining security / behavior issues
