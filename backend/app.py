@@ -8,14 +8,17 @@ import re
 import secrets
 import sqlite3
 import time
+import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlsplit
 
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +27,7 @@ class Settings:
     app_env: str = "development"
     database_url: str = "sqlite:///./aether-sandbox.db"
     telegram_bot_token: str = ""
+    trongrid_api_key: str = ""
     telegram_auth_max_age_seconds: int = 300
     app_origins: tuple[str, ...] = ()
     deposit_webhook_secret: str = ""
@@ -48,6 +52,7 @@ class Settings:
             app_env=os.getenv("APP_ENV", "development"),
             database_url=os.getenv("DATABASE_URL", "sqlite:///./aether-sandbox.db"),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
+            trongrid_api_key=os.getenv("TRONGRID_API_KEY", ""),
             telegram_auth_max_age_seconds=int(os.getenv("TELEGRAM_AUTH_MAX_AGE_SECONDS", "300")),
             app_origins=tuple(origin.strip() for origin in os.getenv("APP_ORIGINS", "").split(",") if origin.strip()),
             deposit_webhook_secret=os.getenv("DEPOSIT_WEBHOOK_SECRET", ""),
@@ -70,6 +75,7 @@ class Settings:
     def production_gaps(self) -> list[str]:
         required = {
             "TELEGRAM_BOT_TOKEN": self.telegram_bot_token,
+            "TRONGRID_API_KEY": self.trongrid_api_key,
             "APP_ORIGINS": self.app_origins,
             "DATA_REGION=ru": self.data_region.lower() == "ru",
             "REGULATORY_APPROVED=1": self.regulatory_approved,
@@ -289,6 +295,61 @@ def valid_tron_address(address: str) -> bool:
     return hmac.compare_digest(decoded[21:], checksum)
 
 
+TRON_RPC_BASE = "https://api.trongrid.io"
+TRON_POST_ENDPOINTS = {
+    "/wallet/triggerconstantcontract",
+    "/wallet/estimateenergy",
+    "/wallet/getaccountresource",
+    "/wallet/getaccount",
+    "/wallet/getchainparameters",
+    "/wallet/triggersmartcontract",
+    "/wallet/createtransaction",
+    "/wallet/broadcasttransaction",
+    "/wallet/gettransactioninfobyid",
+}
+_tron_user_requests: dict[str, list[float]] = {}
+
+
+def validate_tron_rpc_request(method: str, path: str, body: dict[str, Any] | None) -> str:
+    parsed = urlsplit(path)
+    if parsed.scheme or parsed.netloc or parsed.fragment or not parsed.path.startswith("/") or ".." in parsed.path:
+        raise ValueError("Invalid TRON RPC path")
+    if method == "POST":
+        if parsed.query or parsed.path not in TRON_POST_ENDPOINTS or body is None:
+            raise ValueError("TRON RPC method is not allowed")
+        return parsed.path
+    if method != "GET" or body is not None:
+        raise ValueError("TRON RPC method is not allowed")
+    match = re.fullmatch(r"/v1/accounts/([^/]+)(/transactions(?:/trc20)?)?", parsed.path)
+    if not match or not valid_tron_address(match.group(1)):
+        raise ValueError("TRON account query is not allowed")
+    suffix = match.group(2) or ""
+    pairs = parse_qsl(parsed.query, keep_blank_values=False, strict_parsing=True)
+    allowed = {"limit", "contract_address"} if suffix == "/transactions/trc20" else {"limit"} if suffix == "/transactions" else set()
+    if len(pairs) > len(allowed) or any(k not in allowed for k, _ in pairs) or len({k for k, _ in pairs}) != len(pairs):
+        raise ValueError("TRON account query parameters are not allowed")
+    query = dict(pairs)
+    if "limit" in query and (not query["limit"].isdigit() or not 1 <= int(query["limit"]) <= 50):
+        raise ValueError("TRON history page size must be between 1 and 50")
+    if "contract_address" in query and not valid_tron_address(query["contract_address"]):
+        raise ValueError("Invalid TRON token contract")
+    return path
+
+
+def enforce_tron_user_rate_limit(user_id: str) -> None:
+    now = time.monotonic()
+    hits = [hit for hit in _tron_user_requests.get(user_id, []) if now - hit < 60]
+    if len(hits) >= 60:
+        _tron_user_requests[user_id] = hits
+        raise HTTPException(status_code=429, detail="TRON request limit reached; retry shortly")
+    hits.append(now)
+    _tron_user_requests[user_id] = hits
+    if len(_tron_user_requests) > 50_000:
+        for key, values in list(_tron_user_requests.items()):
+            if not values or now - values[-1] >= 60:
+                _tron_user_requests.pop(key, None)
+
+
 def add_audit(conn, event: str, user_id: str, reference: str) -> None:
     subject_ref = hashlib.sha256(user_id.encode()).hexdigest()
     execute(conn, "INSERT INTO audit_events(event, subject_ref, reference, created_at) VALUES(?,?,?,?)",
@@ -429,6 +490,12 @@ class WalletAddressSet(BaseModel):
     addresses: dict[str, str]
 
 
+class TronProxyRequest(BaseModel):
+    method: str = Field(pattern=r"^(GET|POST)$")
+    path: str = Field(min_length=1, max_length=2048)
+    body: dict[str, Any] | None = None
+
+
 class AcquirerEvent(BaseModel):
     event_id: str = Field(min_length=8, max_length=128)
     purchase_id: str = Field(min_length=16, max_length=64)
@@ -455,7 +522,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             CORSMiddleware,
             allow_origins=list(config.app_origins),
             allow_credentials=False,
-            allow_methods=["GET", "PUT", "OPTIONS"],
+            allow_methods=["GET", "PUT", "POST", "OPTIONS"],
             allow_headers=["Authorization", "Content-Type"],
         )
 
@@ -471,6 +538,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "mode": "sandbox" if config.app_env != "production" else "production"}
+
+    @app.post("/v1/tron/rpc")
+    async def tron_rpc(payload: TronProxyRequest, user: dict[str, str] = Depends(authenticated_user)):
+        if not config.trongrid_api_key:
+            raise HTTPException(status_code=503, detail="TRON mainnet provider is not configured")
+        try:
+            path = validate_tron_rpc_request(payload.method, payload.path, payload.body)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        request_body = json.dumps(payload.body, separators=(",", ":")).encode() if payload.body is not None else None
+        if request_body is not None and len(request_body) > 1_000_000:
+            raise HTTPException(status_code=413, detail="TRON RPC request is too large")
+        enforce_tron_user_rate_limit(user["id"])
+        headers = {"TRON-PRO-API-KEY": config.trongrid_api_key, "Accept": "application/json"}
+        if request_body is not None:
+            headers["Content-Type"] = "application/json"
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(12.0), follow_redirects=False) as client:
+                response = await client.request(payload.method, TRON_RPC_BASE + path, content=request_body, headers=headers)
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail="TRON mainnet provider is unavailable") from exc
+        try:
+            result = response.json()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="TRON provider returned an invalid response") from exc
+        if response.status_code >= 400 or (isinstance(result, dict) and (result.get("Error") or result.get("error"))):
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="TRON provider rate limit reached")
+            raise HTTPException(status_code=502, detail="TRON provider rejected the request")
+        return JSONResponse(content=result)
 
     @app.get("/v1/account")
     def get_account(user: dict[str, str] = Depends(authenticated_user)) -> dict[str, Any]:
